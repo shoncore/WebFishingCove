@@ -21,15 +21,17 @@ void SteamworksTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
     SteamClient.RunCallbacks();
 
     // we are going to check if there are any incoming net packets!
-    if (SteamNetworking.IsP2PPacketAvailable(channel: 0))
+    if (SteamNetworking.IsP2PPacketAvailable(channel: 2))
     {
-        Steamworks.Data.P2Packet? packet = SteamNetworking.ReadP2PPacket(channel: 0);
+        Steamworks.Data.P2Packet? packet = SteamNetworking.ReadP2PPacket(channel: 2);
         if (packet != null)
         {
             byte[] packetBytes = GzipHelper.DecompressGzip(packet.Value.Data);
 
             GodotPacketDeserializer packetDeserializer = new GodotPacketDeserializer(packetBytes);
             var packetValues = packetDeserializer.readPacket();
+
+            printStringDict(packetValues);
 
             packetValues = null;
 
