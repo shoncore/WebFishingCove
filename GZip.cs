@@ -19,15 +19,13 @@ public class GzipHelper
     }
 
     // Function to compress a string into a GZIP-encoded byte array
-    public static byte[] CompressGzip(string text)
+    public static byte[] CompressGzip(byte[] data)
     {
-        var textBytes = Encoding.UTF8.GetBytes(text);
-
         using (var outputStream = new MemoryStream())
         {
             using (var gzipStream = new GZipStream(outputStream, CompressionMode.Compress))
             {
-                gzipStream.Write(textBytes, 0, textBytes.Length);
+                gzipStream.Write(data, 0, data.Length);
             }
             return outputStream.ToArray();
         }

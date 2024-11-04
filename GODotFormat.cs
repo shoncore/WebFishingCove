@@ -1,4 +1,6 @@
-﻿enum GodotTypes
+﻿using System.Text;
+
+enum GodotTypes
 {
     nullValue = 0,
     boolValue = 1,
@@ -19,7 +21,7 @@
     ridValue = 0, // ns
     objectValue = 0, //ns
     dictionaryValue = 18,
-    arrayValue = 0
+    arrayValue = 19
 }
 
 public class Vector3
@@ -108,6 +110,9 @@ public class GodotPacketDeserializer {
             case (int) GodotTypes.dictionaryValue:
                 return readDictionary();
                 return null;
+
+            case (int)GodotTypes.arrayValue:
+                return readArray();
 
             case (int) GodotTypes.stringValue:
                 return readString();
@@ -214,6 +219,21 @@ public class GodotPacketDeserializer {
         return new string(stringValue);
     }
 
+    private Dictionary<int, object> readArray()
+    {
+        Dictionary<int, object> array = new Dictionary<int, object>();
+
+        int elementCount = reader.ReadInt32() & 0x7FFFFFFF;
+
+        for (int i = 0; i < elementCount; i++)
+        {
+            object ins = readNext(); // read the next thing
+            array[i] = ins;
+        }
+
+        return array;
+    }
+
     private Dictionary<string, object> readDictionary()
     {
 
@@ -241,4 +261,112 @@ public class GodotPacketDeserializer {
         return dic;
     }
 
+}
+
+public class GodotWriter
+{
+
+    public static byte[] WriteGodotPacket(Dictionary<string, object> packet)
+    {
+        MemoryStream stream = new MemoryStream();
+        BinaryWriter bw = new BinaryWriter(stream);
+
+        writeDictionary(packet, bw);
+
+        return stream.ToArray();
+
+    }
+
+    private static void writeAny(object packet, BinaryWriter bw)
+    {
+        if (packet == null)
+        {
+            bw.Write(0);
+        }
+        else if(packet is Dictionary<string, object>)
+        {
+            writeDictionary((Dictionary<string, object>) packet, bw);
+        } else if (packet is string)
+        {
+            writeString((string) packet, bw);
+        } else if(packet is int)
+        {
+            writeInt((int) packet, bw);
+        } else if( packet is long)
+        {
+            writeLong((long) packet, bw);
+        } else if (packet is Single)
+        {
+            writeSingle((Single) packet, bw);
+        } else if ( packet is Double)
+        {
+            writeDouble((Double) packet, bw);
+        } else if (packet is bool)
+        {
+            writeBool((bool) packet, bw);
+        }
+    }
+
+    private static void writeBool(bool packet,  BinaryWriter bw)
+    {
+        bw.Write((int) 2);
+        bw.Write(packet ? 1 : 0);
+    }
+
+    private static void writeInt(int packet, BinaryWriter writer)
+    {
+        writer.Write((int)GodotTypes.intValue); // write the int value header!
+        writer.Write((int)packet);
+    }
+
+    private static void writeLong(long packet, BinaryWriter writer)
+    {
+        writer.Write(65538); // write the int value header! this is the same as above but with the 64 bit header!
+        writer.Write((long)packet);
+    }
+
+    private static void writeSingle(Single packet, BinaryWriter writer)
+    {
+        writer.Write((int) 3);
+        writer.Write((Single) packet);
+    }
+
+    private static void writeDouble(Double packet, BinaryWriter writer)
+    {
+        writer.Write((int) 65539);// write the float value header! this is the same as above but with the 64 bit header!
+        writer.Write((Double)packet);
+    }
+
+    private static void writeString(string packet, BinaryWriter bw)
+    {
+        bw.Write((int) 4); // remeber to write the string header!
+        bw.Write((int) packet.Length);
+        byte[] bytes = Encoding.UTF8.GetBytes(packet);
+        // get the ammount to pad by!
+
+        // Step 3: Write the actual bytes of the string
+        bw.Write(bytes);
+
+        // Step 4: Calculate padding needed to make the total length a multiple of 4
+        int padding = (4 - (bytes.Length % 4)) % 4; // Calculate padding
+
+        // Step 5: Write padding bytes (if needed)
+        for (int i = 0; i < padding; i++)
+        {
+            bw.Write((byte)0); // Write padding as zero bytes
+        }
+    }
+
+    private static void writeDictionary(Dictionary<string, object> packet, BinaryWriter writer)
+    {
+        // because we have a dic we need to write the correct byte info!
+        writer.Write((int)18); // make sure these are 4 bits as that is what godot is exspecting!
+        writer.Write((int) packet.Count);
+
+        foreach (KeyValuePair<string, object> pair in packet)
+        {
+            writeAny(pair.Key, writer);
+            writeAny(pair.Value, writer);
+        }
+    }
 }
