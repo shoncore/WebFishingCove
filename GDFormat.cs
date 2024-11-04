@@ -1,5 +1,9 @@
-﻿using System.Text;
+﻿// This reads and writes Godot's serialized format
+// https://docs.godotengine.org/en/stable/tutorials/io/binary_serialization_api.html
 
+using System.Text;
+
+// alot of these need to be filled in lmao
 enum GodotTypes
 {
     nullValue = 0,
@@ -7,7 +11,7 @@ enum GodotTypes
     intValue = 2,
     floatValue = 3,
     stringValue = 4,
-    vector2Value = 0,
+    vector2Value = 5,
     rect2Value = 0,
     vector3Value = 7,
     transform2DValue = 0,
@@ -35,6 +39,18 @@ public class Vector3
         this.x = x;
         this.y = y;
         this.z = z;
+    }
+}
+
+public class Vector2
+{
+    public float x;
+    public float y;
+
+    public Vector2(float x, float y)
+    {
+        this.x = x;
+        this.y = y;
     }
 }
 
@@ -109,7 +125,6 @@ public class GodotPacketDeserializer {
 
             case (int) GodotTypes.dictionaryValue:
                 return readDictionary();
-                return null;
 
             case (int)GodotTypes.arrayValue:
                 return readArray();
@@ -134,11 +149,15 @@ public class GodotPacketDeserializer {
 
             case (int)GodotTypes.floatValue:
                 return readFloat(false);
+
             case 65539: // same as above but with the 64bit flag set!
                 return readFloat(true);
 
             case (int)GodotTypes.planeValue:
                 return readPlane();
+
+            case (int)GodotTypes.vector2Value:
+                return readVector2();
 
             default:
                 Console.WriteLine($"Unable to handel object of type: {type}");
@@ -181,6 +200,15 @@ public class GodotPacketDeserializer {
         Quat quat = new Quat(x,y,z,w);
 
         return quat;
+    }
+
+    private Vector2 readVector2()
+    {
+        float x = reader.ReadSingle();
+        float y = reader.ReadSingle();
+        Vector2 newVec = new(x, y);
+
+        return newVec;
     }
 
     private Vector3 readVector3()
@@ -304,6 +332,9 @@ public class GodotWriter
         } else if (packet is bool)
         {
             writeBool((bool) packet, bw);
+        } else if (packet is Dictionary<int, object>)
+        {
+            writeArray((Dictionary<int, object>) packet, bw);
         }
     }
 
@@ -354,6 +385,18 @@ public class GodotWriter
         for (int i = 0; i < padding; i++)
         {
             bw.Write((byte)0); // Write padding as zero bytes
+        }
+    }
+
+    private static void writeArray(Dictionary<int, object> packet, BinaryWriter writer)
+    {
+        // because we have a dic we need to write the correct byte info!
+        writer.Write((int)18); // make sure these are 4 bits as that is what godot is exspecting!
+        writer.Write((int)packet.Count);
+
+        for (int i = 0; i < packet.Count; i++)
+        {
+            writeAny(packet[i], writer);
         }
     }
 

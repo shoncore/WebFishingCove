@@ -1,14 +1,17 @@
 ﻿using Steamworks;
 using Steamworks.Data;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.Metrics;
-using System.Net.Sockets;
-using System.Text;
+
 
 var _exitEvent = new ManualResetEvent(false);
 var WebFishingGameVersion = "1.08";
 int MaxPlayers = 50;
+string ServerName = "Always Fishing 24/7!";
+string LobbyCode = "fish";
+
+string[] Admins = new string[2];
+Admins[0] = "76561199177316289"; // Uhh
+
+List<WebFisher> AllPlayers = new();
 
 try {
     SteamClient.Init(3146520, true);
@@ -18,7 +21,7 @@ try {
 }
 
 // setup a steamworks update timer!
-var steamworksTimer = new System.Timers.Timer(1000/120); // An update rate of 60hz
+var steamworksTimer = new System.Timers.Timer(1000/120); // An update rate of 120hz
 Steamworks.Data.Lobby gameLobby = new Steamworks.Data.Lobby();
 
 Dictionary<string, object> readPacket(byte[] packetBytes)
@@ -63,10 +66,13 @@ void SteamworksTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
 
                 SendAllPlayer(hostPacket);
 
+                //Console.WriteLine($"User has been informed of the lobby host!");
 
-                Console.WriteLine($"User has been informed of the lobby host!");
+                SendPlayerChat("[color=#000000][u]This server is running a prerelease version of Cove[/u][/color]", packet.Value.SteamId);
+                SendPlayerChat("[color=#000000][u]Cove is a community mod, it is unstable right now![/u][/color]", packet.Value.SteamId);
 
-                SendPlayerChat("[b]The dedicated server is a community mod, it is unstable right now![/b]", packet.Value.SteamId);
+                Console.WriteLine("Sending player welcome message");
+
             }
         }
     }
@@ -116,11 +122,42 @@ void SteamworksTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
                 //Console.WriteLine("--- Print Start ---");
                 //printStringDict(packetInfo);
                 //Console.WriteLine("--- Print End ---");
+                if ((string) packetInfo["action"] == "_sync_create_bubble")
+                {
+                    string Message = (string)((Dictionary<int, object>)packetInfo["params"])[0];
+                    OnPlayerChat(Message, packet.Value.SteamId);
+                }
             }
 
         }
     }
 
+}
+
+void OnPlayerChat(string message, SteamId id)
+{
+    WebFisher sender = AllPlayers.Find(p => p.SteamId == id);
+    Console.WriteLine($"{sender.FisherName}: {message}");
+
+    char[] msg = message.ToCharArray();
+    if (msg[0] == "!".ToCharArray()[0]) // its a command!
+    {
+        string command = message.Split(" ")[0].ToLower();
+        switch (command)
+        {
+            case "!users":
+
+                string messageBody = "";
+                foreach (var player in AllPlayers)
+                {
+                    messageBody += $"{player.FisherName} [{player.SteamId}]: {player.FisherID}\n";
+                }
+
+                SendLetter(id, SteamClient.SteamId, "header", messageBody, "yours ", "Cove");
+
+                break;
+        }
+    }
 }
 
 void printArray(Dictionary<int, object> obj, string sub = "")
@@ -162,6 +199,29 @@ steamworksTimer.Elapsed += SteamworksTimer_Elapsed;
 steamworksTimer.AutoReset = true;
 steamworksTimer.Enabled = true; // start the timer!
 steamworksTimer.Start();
+
+// returns the letter id!
+string SendLetter(SteamId to, SteamId from, string header, string body, string closing, string user)
+{
+    // Crashes the game lmao
+    Dictionary<string, object> letterPacket = new();
+    letterPacket["type"] = "letter_received";
+    letterPacket["to"] = (double)to.Value;
+    Dictionary<string, object> data = new Dictionary<string, object>();
+    data["to"] = (double)to.Value;
+    data["from"] = (double)from.Value;
+    data["header"] = header;
+    data["body"] = body;
+    data["closing"] = closing;
+    data["user"] = user;
+    data["letter_id"] = new string(Enumerable.Range(0, 5).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
+    data["items"] = new Dictionary<int, object>();
+    letterPacket["data"] = data;
+
+    SendAllPlayer(letterPacket);
+
+    return (string)data["letter_id"];
+}
 
 void SendAllPlayer(Dictionary<string, object> packet)
 {
@@ -223,7 +283,6 @@ void MessageTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
     hostPacket["host_id"] = SteamClient.SteamId.Value.ToString();
 
     SendAllPlayer(hostPacket);
-
 }
 messageTimer.AutoReset = true;
 messageTimer.Enabled = true; // start the timer!
@@ -231,7 +290,7 @@ messageTimer.Start();
 
 void updatePlayercount()
 {
-    string serverName = $"24/7 Fishing [color=#b48141]({gameLobby.MemberCount-1}/{MaxPlayers})[/color] [Dedicated]\n";
+    string serverName = $"{ServerName} [color=#b48141]({gameLobby.MemberCount-1}/{MaxPlayers})[/color] [Dedicated]\n";
     gameLobby.SetData("name", serverName); // not sure what this dose rn
 }
 
@@ -242,17 +301,18 @@ void SteamMatchmaking_OnLobbyCreated(Result result, Steamworks.Data.Lobby Lobby)
     Lobby.SetData("mode", "GodotsteamLobby");
     Lobby.SetData("ref", "webfishinglobby");
     Lobby.SetData("version", WebFishingGameVersion);
-    Lobby.SetData("code", "fish");
+    Lobby.SetData("code", LobbyCode);
     Lobby.SetData("type", "public");
     Lobby.SetData("public", "true");
     Lobby.SetData("banned_players", "");
+    Lobby.SetData("lurefilter", "dedicated"); // make the server showup in lure's dedicated section!
 
     SteamNetworking.AllowP2PPacketRelay(true);
 
     Lobby.SetData("server_browser_value", "2"); // i have no idea!
 
     Console.WriteLine("Lobby Created!");
-    Console.WriteLine("Lobby Code: fish");
+    Console.WriteLine($"Lobby Code: {Lobby.GetData("code")}");
 
     gameLobby = Lobby;
 
@@ -263,16 +323,34 @@ void SteamMatchmaking_OnLobbyCreated(Result result, Steamworks.Data.Lobby Lobby)
 SteamMatchmaking.OnLobbyMemberJoined += SteamMatchmaking_OnLobbyMemberJoined;
 void SteamMatchmaking_OnLobbyMemberJoined(Steamworks.Data.Lobby Lobby, Friend userJoining)
 {
-    Console.WriteLine(userJoining.Name + " has joined the game!");
+    Console.WriteLine($"{userJoining.Name} [{userJoining.Id}] has joined the game!");
     updatePlayercount();
+
+    WebFisher newPlayer = new WebFisher(userJoining.Id, userJoining.Name);
+    AllPlayers.Add(newPlayer);
+
+    Console.WriteLine($"{userJoining.Name} has been assigned the fisherID: {newPlayer.FisherID}");
+    
+    Console.WriteLine($"Player count: {gameLobby.MemberCount - 1}");
 }
 
 SteamMatchmaking.OnLobbyMemberLeave += SteamMatchmaking_OnLobbyMemberLeave;
 
 void SteamMatchmaking_OnLobbyMemberLeave(Steamworks.Data.Lobby Lobby, Friend userLeaving)
 {
-    Console.WriteLine(userLeaving.Name + " has left the game!");
+    Console.WriteLine($"{userLeaving.Name} [{userLeaving.Id}] has left the game!");
     updatePlayercount();
+
+    foreach (var player in AllPlayers)
+    {
+        if (player.SteamId == userLeaving.Id)
+        {
+            AllPlayers.Remove(player);
+            Console.WriteLine($"{userLeaving.Name} has been removed!");
+        }
+    }
+
+    Console.WriteLine($"Player count: {gameLobby.MemberCount - 1}");
 }
 
 SteamNetworking.OnP2PSessionRequest += void (SteamId id) => {
