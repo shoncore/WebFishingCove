@@ -23,7 +23,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>steam_api.dll</TargetPath>
     </None>
+
+    <Content Include="worlds\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     
   </ItemGroup>
+
 
 </Project>

@@ -17,3 +17,5 @@ C:\Users\theen\Desktop\WFSermver\bin\Debug\net6.0\Facepunch.Steamworks.Win64.dll
 C:\Users\theen\Desktop\WFSermver\obj\Debug\net6.0\WFSermver.csproj.CopyComplete
 C:\Users\theen\Desktop\WFSermver\bin\Debug\net6.0\steam_api64.dll
 C:\Users\theen\Desktop\WFSermver\bin\Debug\net6.0\steam_api.dll
+C:\Users\theen\Desktop\WFSermver\bin\Debug\net6.0\worlds\main_zone.tscn
+C:\Users\theen\Desktop\WFSermver\bin\Debug\net6.0\worlds\readme.txt

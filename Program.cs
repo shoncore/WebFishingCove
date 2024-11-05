@@ -1,6 +1,6 @@
 ﻿using Steamworks;
 using Steamworks.Data;
-using System.Diagnostics.Metrics;
+using System.Threading;
 
 
 var _exitEvent = new ManualResetEvent(false);
@@ -12,7 +12,11 @@ string LobbyCode = "fish";
 string[] Admins = new string[2];
 Admins[0] = "76561199177316289"; // Uhh
 
+// list of all WebFishers
 List<WebFisher> AllPlayers = new();
+
+// get all the spawn points for fish!
+List<Vector3> fish_points = WFSermver.ReadWorldFile.readPoints("fish_spawn", File.ReadAllText($"{AppDomain.CurrentDomain.BaseDirectory}worlds/main_zone.tscn"));
 
 try {
     SteamClient.Init(3146520, false);
@@ -22,7 +26,7 @@ try {
 }
 
 // setup a steamworks update timer!
-var steamworksTimer = new System.Timers.Timer(1000/120); // An update rate of 120hz
+var steamworksTimer = new System.Timers.Timer(1); // An update rate of 120hz
 Steamworks.Data.Lobby gameLobby = new Steamworks.Data.Lobby();
 
 Dictionary<string, object> readPacket(byte[] packetBytes)
@@ -36,101 +40,146 @@ byte[] writePacket(Dictionary<string, object> packet)
     return GzipHelper.CompressGzip(godotBytes);
 }
 
-void SteamworksTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
+Thread cbThread = new Thread(runSteamworksUpdate);
+cbThread.IsBackground = true;
+cbThread.Start();
+
+static void runSteamworksUpdate()
 {
-    SteamClient.RunCallbacks();
-
-    // we are going to check if there are any incoming net packets!
-    if (SteamNetworking.IsP2PPacketAvailable(channel: 0))
+    while (true)
     {
-        Steamworks.Data.P2Packet? packet = SteamNetworking.ReadP2PPacket(channel: 0);
-        if (packet != null)
-        {
-            Dictionary<string, object> packetInfo = readPacket(GzipHelper.DecompressGzip(packet.Value.Data));
-
-            if ((string)packetInfo["type"] == "handshake_request")
-            {
-                Dictionary<string, object> handshakePacket = new();
-                handshakePacket["type"] = "handshake";
-                handshakePacket["user_id"] = SteamClient.SteamId.Value.ToString();
-
-                // send the ping packet!
-                SteamNetworking.SendP2PPacket(packet.Value.SteamId, writePacket(handshakePacket), nChannel: 2);
-            }
-
-            // tell the client who actualy owns the session!
-            if ((string)packetInfo["type"] == "new_player_join")
-            {
-                Dictionary<string, object> hostPacket = new();
-                hostPacket["type"] = "recieve_host";
-                hostPacket["host_id"] = SteamClient.SteamId.Value.ToString();
-
-                SendAllPlayer(hostPacket);
-
-                //Console.WriteLine($"User has been informed of the lobby host!");
-
-                SendPlayerChat("[color=#000000][u]This server is running a prerelease version of Cove[/u][/color]", packet.Value.SteamId);
-                SendPlayerChat("[color=#000000][u]Cove is a community mod, it is unstable right now![/u][/color]", packet.Value.SteamId);
-
-                Console.WriteLine("Sending player welcome message");
-
-            }
-        }
+        //Console.WriteLine("Update!");
+        SteamClient.RunCallbacks();
     }
+}
 
-    // we are going to check if there are any incoming net packets!
-    if (SteamNetworking.IsP2PPacketAvailable(channel: 1))
+Thread networkThread = new Thread(RunNetwork);
+networkThread.IsBackground = true;
+networkThread.Start();
+
+void RunNetwork()
+{
+    while (true)
     {
-        Steamworks.Data.P2Packet? packet = SteamNetworking.ReadP2PPacket(channel: 1);
-        if (packet != null)
+        // we are going to check if there are any incoming net packets!
+        if (SteamNetworking.IsP2PPacketAvailable(channel: 0))
         {
-            Dictionary<string, object> packetInfo = readPacket(GzipHelper.DecompressGzip(packet.Value.Data));
-
-            //Console.WriteLine($"1 > '{packetInfo["type"]}'");
-
-            if ((string) packetInfo["type"] == "request_ping")
+            Steamworks.Data.P2Packet? packet = SteamNetworking.ReadP2PPacket(channel: 0);
+            if (packet != null)
             {
-                Dictionary<string, object> pongPacket = new();
-                pongPacket["type"] = "send_ping";
-                pongPacket["time"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-                pongPacket["from"] = SteamClient.SteamId.Value.ToString();
+                Dictionary<string, object> packetInfo = readPacket(GzipHelper.DecompressGzip(packet.Value.Data));
 
-                // send the ping packet!
-                SteamNetworking.SendP2PPacket(packet.Value.SteamId, writePacket(pongPacket), nChannel: 1);
-
-                Dictionary<string, object> pingPacket = new();
-                pingPacket["type"] = "request_ping";
-                pingPacket["sender"] = SteamClient.SteamId.Value.ToString();
-
-                // send the ping packet!
-                SteamNetworking.SendP2PPacket(packet.Value.SteamId, writePacket(pingPacket), nChannel: 0);
-            }
-        }
-    }
-
-    // we are going to check if there are any incoming net packets!
-    if (SteamNetworking.IsP2PPacketAvailable(channel: 2))
-    {
-        Steamworks.Data.P2Packet? packet = SteamNetworking.ReadP2PPacket(channel: 2);
-        if (packet != null)
-        {
-            Dictionary<string, object> packetInfo = readPacket(GzipHelper.DecompressGzip(packet.Value.Data));
-
-            //Console.WriteLine($"2 > '{packetInfo["type"]}'");
-
-            if ((string)packetInfo["type"] == "actor_action")
-            {
-                //Console.WriteLine("--- Print Start ---");
-                //printStringDict(packetInfo);
-                //Console.WriteLine("--- Print End ---");
-                if ((string) packetInfo["action"] == "_sync_create_bubble")
+                if ((string)packetInfo["type"] == "handshake_request")
                 {
-                    string Message = (string)((Dictionary<int, object>)packetInfo["params"])[0];
-                    OnPlayerChat(Message, packet.Value.SteamId);
+                    Dictionary<string, object> handshakePacket = new();
+                    handshakePacket["type"] = "handshake";
+                    handshakePacket["user_id"] = SteamClient.SteamId.Value.ToString();
+
+                    // send the ping packet!
+                    SteamNetworking.SendP2PPacket(packet.Value.SteamId, writePacket(handshakePacket), nChannel: 2);
+                }
+
+                // tell the client who actualy owns the session!
+                if ((string)packetInfo["type"] == "new_player_join")
+                {
+                    Dictionary<string, object> hostPacket = new();
+                    hostPacket["type"] = "recieve_host";
+                    hostPacket["host_id"] = SteamClient.SteamId.Value.ToString();
+
+                    SendAllPlayer(hostPacket);
+
+                    SendPlayerChat("[color=#000000][u]This server is running a prerelease version of Cove[/u][/color]", packet.Value.SteamId);
+                    SendPlayerChat("[color=#000000][u]Cove is a community mod, it is unstable right now![/u][/color]", packet.Value.SteamId);
+
+                    Console.WriteLine("Sending player welcome message");
+                }
+
+                if ((string)packetInfo["type"] == "instance_actor" && (string)((Dictionary<string, object>)packetInfo["params"])["actor_type"] == "player")
+                {
+                    Console.WriteLine("Player has created player Instance!");
+                    WebFisher thisPlayer = AllPlayers.Find(p => p.SteamId.Value == packet.Value.SteamId);
+
+                    long actorID = (long)((Dictionary<string, object>)packetInfo["params"])["actor_id"];
+                    if (thisPlayer == null)
+                    {
+                        Console.WriteLine("No fisher found for player instance!");
+                    }
+                    else
+                    {
+                        thisPlayer.PlayerInstanceID = actorID;
+                        Console.WriteLine($"{thisPlayer.FisherName} has the player instance {thisPlayer.PlayerInstanceID}");
+                    }
+                }
+
+                if ((string)packetInfo["type"] == "actor_update")
+                {
+                    WebFisher thisPlayer = AllPlayers.Find(p => p.PlayerInstanceID == (long)packetInfo["actor_id"]);
+                    if (thisPlayer != null)
+                    {
+                        Dictionary<string, object> data = (Dictionary<string, object>)packetInfo["data"];
+                        Vector3 position = (Vector3)data["pos"];
+
+                        thisPlayer.PlayerPosition = position;
+                    }
                 }
             }
-
         }
+
+        // we are going to check if there are any incoming net packets!
+        if (SteamNetworking.IsP2PPacketAvailable(channel: 1))
+        {
+            Steamworks.Data.P2Packet? packet = SteamNetworking.ReadP2PPacket(channel: 1);
+            if (packet != null)
+            {
+                Dictionary<string, object> packetInfo = readPacket(GzipHelper.DecompressGzip(packet.Value.Data));
+
+                //Console.WriteLine($"1 > '{packetInfo["type"]}'");
+
+                if ((string)packetInfo["type"] == "request_ping")
+                {
+                    Dictionary<string, object> pongPacket = new();
+                    pongPacket["type"] = "send_ping";
+                    pongPacket["time"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+                    pongPacket["from"] = SteamClient.SteamId.Value.ToString();
+
+                    // send the ping packet!
+                    SteamNetworking.SendP2PPacket(packet.Value.SteamId, writePacket(pongPacket), nChannel: 1);
+
+                    Dictionary<string, object> pingPacket = new();
+                    pingPacket["type"] = "request_ping";
+                    pingPacket["sender"] = SteamClient.SteamId.Value.ToString();
+
+                    // send the ping packet!
+                    SteamNetworking.SendP2PPacket(packet.Value.SteamId, writePacket(pingPacket), nChannel: 0);
+                }
+            }
+        }
+
+        // we are going to check if there are any incoming net packets!
+        if (SteamNetworking.IsP2PPacketAvailable(channel: 2))
+        {
+            Steamworks.Data.P2Packet? packet = SteamNetworking.ReadP2PPacket(channel: 2);
+            if (packet != null)
+            {
+                Dictionary<string, object> packetInfo = readPacket(GzipHelper.DecompressGzip(packet.Value.Data));
+
+                //Console.WriteLine($"2 > '{packetInfo["type"]}'");
+
+                if ((string)packetInfo["type"] == "actor_action")
+                {
+                    //Console.WriteLine("--- Print Start ---");
+                    //printStringDict(packetInfo);
+                    //Console.WriteLine("--- Print End ---");
+                    if ((string)packetInfo["action"] == "_sync_create_bubble")
+                    {
+                        string Message = (string)((Dictionary<int, object>)packetInfo["params"])[0];
+                        OnPlayerChat(Message, packet.Value.SteamId);
+                    }
+                }
+
+            }
+        }
+
     }
 
 }
@@ -162,6 +211,14 @@ void OnPlayerChat(string message, SteamId id)
                 SendPlayerChat("spawning!", id);
                 spawnRainCloud();
                 break;
+
+            case "!spawnfish":
+                spawnFish();
+                break;
+
+            case "!spawnm":
+                spawnFish("fish_spawn_alien"); // metetore
+                break;
         }
     }
 }
@@ -186,6 +243,27 @@ void spawnRainCloud()
     instanceSpacePrams["data"] = new Dictionary<string, object>();
 
     SendAllPlayer(rainSpawnPacket); // spawn the rain!
+}
+
+void spawnFish(string fishType = "fish_spawn")
+{
+    Dictionary<string, object> spawnPacket = new Dictionary<string, object>();
+
+    spawnPacket["type"] = "instance_actor";
+
+    // {"actor_type": actor_type, "at": at, "zone": zone, "actor_id": id, "creator_id": creator, "data": data}
+
+    Dictionary<string, object> instanceSpacePrams = new Dictionary<string, object>();
+    spawnPacket["params"] = instanceSpacePrams;
+
+    instanceSpacePrams["actor_type"] = fishType;
+    instanceSpacePrams["at"] = new Vector3(28.45f, 1.75f, -0.093f); //fish_points[(new Random()).Next(fish_points.Count - 1)];
+    instanceSpacePrams["zone"] = "main_zone";
+    instanceSpacePrams["actor_id"] = -1;
+    instanceSpacePrams["creator_id"] = (string)SteamClient.SteamId.Value.ToString();
+    instanceSpacePrams["data"] = new Dictionary<string, object>();
+
+    SendAllPlayer(spawnPacket); // spawn the rain!
 }
 
 void printArray(Dictionary<int, object> obj, string sub = "")
@@ -223,10 +301,12 @@ void printStringDict(Dictionary<string, object> obj, string sub = "")
     }
 }
 
+/*
 steamworksTimer.Elapsed += SteamworksTimer_Elapsed;
 steamworksTimer.AutoReset = true;
 steamworksTimer.Enabled = true; // start the timer!
 steamworksTimer.Start();
+*/
 
 // returns the letter id!
 string SendLetter(SteamId to, SteamId from, string header, string body, string closing, string user)
@@ -418,6 +498,7 @@ void Console_CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
     }
 
     gameLobby.Leave(); // close the lobby
+    SteamClient.Shutdown();
 }
 
 _exitEvent.WaitOne(); // have this at the end of the program, it stops the thread from ending!
