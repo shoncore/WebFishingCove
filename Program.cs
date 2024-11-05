@@ -106,14 +106,14 @@ void RunNetwork()
                 // tell the client who actualy owns the session!
                 if ((string)packetInfo["type"] == "new_player_join")
                 {
+                    messagePlayer("[color=#000000]This is a [b]Cove[/b] dedicated server![/color]", packet.Value.SteamId);
+                    messagePlayer("[color=#000000]Please report any issues to the [u][url=https://github.com/DrMeepso/WebFishingCove]github![/url][/u][/color]", packet.Value.SteamId);
+
                     Dictionary<string, object> hostPacket = new();
                     hostPacket["type"] = "recieve_host";
                     hostPacket["host_id"] = SteamClient.SteamId.Value.ToString();
 
                     sendPacketToPlayers(hostPacket);
-
-                    messagePlayer("[color=#000000][u]This server is running a prerelease version of Cove[/u][/color]", packet.Value.SteamId);
-                    messagePlayer("[color=#000000][u]Cove is a community mod, it is unstable right now![/u][/color]", packet.Value.SteamId);
                 }
 
                 if ((string)packetInfo["type"] == "instance_actor" && (string)((Dictionary<string, object>)packetInfo["params"])["actor_type"] == "player")
@@ -164,13 +164,6 @@ void RunNetwork()
 
                     // send the ping packet!
                     SteamNetworking.SendP2PPacket(packet.Value.SteamId, writePacket(pongPacket), nChannel: 1);
-
-                    Dictionary<string, object> pingPacket = new();
-                    pingPacket["type"] = "request_ping";
-                    pingPacket["sender"] = SteamClient.SteamId.Value.ToString();
-
-                    // send the ping packet!
-                    SteamNetworking.SendP2PPacket(packet.Value.SteamId, writePacket(pingPacket), nChannel: 0);
                 }
             }
         }
@@ -443,28 +436,16 @@ void messagePlayer(string msg, SteamId id)
     SteamNetworking.SendP2PPacket(id, writePacket(chatPacket), nChannel: 2);
 }
 
+// request player pings
 var messageTimer = new System.Timers.Timer(1000); // An update rate of 5 seconds
 messageTimer.Elapsed += MessageTimer_Elapsed;
 void MessageTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
 {
-    Dictionary<string, object> pongPacket = new();
-    pongPacket["type"] = "send_ping";
-    pongPacket["time"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-    pongPacket["from"] = SteamClient.SteamId.Value.ToString();
-
-    sendPacketToPlayers(pongPacket);
-
     Dictionary<string, object> pingPacket = new();
     pingPacket["type"] = "request_ping";
     pingPacket["sender"] = SteamClient.SteamId.Value.ToString();
 
     sendPacketToPlayers(pingPacket);
-
-    Dictionary<string, object> hostPacket = new();
-    hostPacket["type"] = "recieve_host";
-    hostPacket["host_id"] = SteamClient.SteamId.Value.ToString();
-
-    sendPacketToPlayers(hostPacket);
 }
 messageTimer.AutoReset = true;
 messageTimer.Enabled = true; // start the timer!
@@ -474,6 +455,12 @@ var hostSpawnTimer = new Repeat(hostSpawn, 10000);
 // port of the _host_spawn_object(): in the world.gd script from the game!
 int hostSpawn()
 {
+    // send the host packet again just to make sure!
+    Dictionary<string, object> hostPacket = new();
+    hostPacket["type"] = "recieve_host";
+    hostPacket["host_id"] = SteamClient.SteamId.Value.ToString();
+
+    sendPacketToPlayers(hostPacket);
 
     bool isRaining = false;
     WFInstance rain = serverOwnedInstances.Find(i => i.Type == "raincloud");

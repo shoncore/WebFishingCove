@@ -86,6 +86,13 @@ public class Plane
     }
 }
 
+public class ReadError
+{
+    public ReadError()
+    {
+
+    }
+}
 public class GodotPacketDeserializer {
 
     public byte[] data;
@@ -161,7 +168,7 @@ public class GodotPacketDeserializer {
 
             default:
                 Console.WriteLine($"Unable to handel object of type: {type}");
-                return null;
+                return new ReadError();
         }
     }
 
@@ -271,17 +278,20 @@ public class GodotPacketDeserializer {
         int elementCount = reader.ReadInt32() & 0x7FFFFFFF;
 
         //Console.WriteLine($"Dictionary has {elementCount} elements!");
-
         for (int i = 0; i < elementCount; i++)
         {
+            object keyValue = readNext();
+            string key = "NullValue";
 
-            string key = (string) readNext();
-            object value = readNext();
-
-            if (key == null)
+            if (keyValue == null || !(keyValue is String)) // if the value is not a string (bad read) break the loop.
             {
-                continue;
+                Console.WriteLine("READ ERROR, KEY PROVIDED IS NOT A STRING!");
+                break; //break from the loop to save the server!
+            } else {
+                key = keyValue.ToString(); // ITS A STRING I SWEAR TO GOD! PLEASEEE
             }
+
+            object value = readNext();
 
             dic[key] = value;
         }
