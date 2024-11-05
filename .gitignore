@@ -1,8 +1,9 @@
 packets.txt
 newPacket.txt
-obj/*
-bin/*
-.vs/*
+obj/
+obj/Debug
+bin/
+.vs/
 
 # World Files should be supplyed yourself when you run the server.
 # main zone / island file that contains spawn positions of items and things!
