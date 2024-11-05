@@ -113,9 +113,16 @@ public class GodotPacketDeserializer {
             throw new Exception("Unable to decode a non-dictionary godot packet!");
         }
 
-        Dictionary<string, object> dic = readDictionary();
+        Dictionary<string, object> dic = new Dictionary<string, object>();
 
-        //Console.WriteLine("Returning read packet!");
+        try
+        {
+            dic = readDictionary();
+        } catch (Exception e) {
+            Console.WriteLine("Error reading packet!"); // incase we do have a error!
+            Console.WriteLine(e.ToString()); // incase we do have a error!
+        }
+
         return dic;
     }
 
@@ -274,10 +281,8 @@ public class GodotPacketDeserializer {
 
         Dictionary<string, object> dic = new Dictionary<string, object>();
 
-        // read how many elements there are in the dic
         int elementCount = reader.ReadInt32() & 0x7FFFFFFF;
 
-        //Console.WriteLine($"Dictionary has {elementCount} elements!");
         for (int i = 0; i < elementCount; i++)
         {
             object keyValue = readNext();
