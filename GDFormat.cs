@@ -335,7 +335,19 @@ public class GodotWriter
         } else if (packet is Dictionary<int, object>)
         {
             writeArray((Dictionary<int, object>) packet, bw);
+        } else if (packet is Vector3)
+        {
+            writeVector3((Vector3) packet, bw);
         }
+    }
+
+    private static void writeVector3(Vector3 packet,  BinaryWriter bw)
+    {
+        bw.Write((int) 7); // write v3 header
+
+        bw.Write((Single)packet.x);
+        bw.Write((Single)packet.y);
+        bw.Write((Single)packet.z);
     }
 
     private static void writeBool(bool packet,  BinaryWriter bw)

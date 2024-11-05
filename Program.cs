@@ -1,5 +1,6 @@
 ﻿using Steamworks;
 using Steamworks.Data;
+using System.Diagnostics.Metrics;
 
 
 var _exitEvent = new ManualResetEvent(false);
@@ -14,7 +15,7 @@ Admins[0] = "76561199177316289"; // Uhh
 List<WebFisher> AllPlayers = new();
 
 try {
-    SteamClient.Init(3146520, true);
+    SteamClient.Init(3146520, false);
 } catch( SystemException e) {
     Console.WriteLine(e.Message);
     return;
@@ -156,8 +157,35 @@ void OnPlayerChat(string message, SteamId id)
                 SendLetter(id, SteamClient.SteamId, "header", messageBody, "yours ", "Cove");
 
                 break;
+
+            case "!spawn":
+                SendPlayerChat("spawning!", id);
+                spawnRainCloud();
+                break;
         }
     }
+}
+
+void spawnRainCloud()
+{
+    Random rand = new Random();
+    Dictionary<string, object> rainSpawnPacket = new Dictionary<string, object>();
+
+    rainSpawnPacket["type"] = "instance_actor";
+
+    // {"actor_type": actor_type, "at": at, "zone": zone, "actor_id": id, "creator_id": creator, "data": data}
+
+    Dictionary<string, object> instanceSpacePrams = new Dictionary<string, object>();
+    rainSpawnPacket["params"] = instanceSpacePrams;
+
+    instanceSpacePrams["actor_type"] = "raincloud";
+    instanceSpacePrams["at"] = new Vector3(rand.Next(-100,150), 42, rand.Next(-150, 100));
+    instanceSpacePrams["zone"] = "main_zone";
+    instanceSpacePrams["actor_id"] = -1;
+    instanceSpacePrams["creator_id"] = (string)SteamClient.SteamId.Value.ToString();
+    instanceSpacePrams["data"] = new Dictionary<string, object>();
+
+    SendAllPlayer(rainSpawnPacket); // spawn the rain!
 }
 
 void printArray(Dictionary<int, object> obj, string sub = "")
@@ -218,7 +246,7 @@ string SendLetter(SteamId to, SteamId from, string header, string body, string c
     data["items"] = new Dictionary<int, object>();
     letterPacket["data"] = data;
 
-    SendAllPlayer(letterPacket);
+    SteamNetworking.SendP2PPacket(to.AccountId, writePacket(letterPacket), nChannel: 2);
 
     return (string)data["letter_id"];
 }
@@ -302,14 +330,15 @@ void SteamMatchmaking_OnLobbyCreated(Result result, Steamworks.Data.Lobby Lobby)
     Lobby.SetData("ref", "webfishinglobby");
     Lobby.SetData("version", WebFishingGameVersion);
     Lobby.SetData("code", LobbyCode);
-    Lobby.SetData("type", "public");
+    //Lobby.SetData("type", "public");
+    Lobby.SetData("type", "code_only");
     Lobby.SetData("public", "true");
     Lobby.SetData("banned_players", "");
     Lobby.SetData("lurefilter", "dedicated"); // make the server showup in lure's dedicated section!
 
     SteamNetworking.AllowP2PPacketRelay(true);
 
-    Lobby.SetData("server_browser_value", "2"); // i have no idea!
+    Lobby.SetData("server_browser_value", "1"); // i have no idea!
 
     Console.WriteLine("Lobby Created!");
     Console.WriteLine($"Lobby Code: {Lobby.GetData("code")}");
