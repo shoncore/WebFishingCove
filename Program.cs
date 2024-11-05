@@ -6,12 +6,15 @@ var _exitEvent = new ManualResetEvent(false);
 var WebFishingGameVersion = "1.08";
 int MaxPlayers = 50;
 string ServerName = "Always Fishing 24/7!";
-string LobbyCode = "blorb"; //"fish";
+string LobbyCode = "fish";
+bool codeOnly = false;
 
 float rainChance = 0f;
 
-string[] Admins = new string[2];
-Admins[0] = "76561199177316289"; // Uhh
+List<string> Admins = new();
+
+Admins.Add("76561199177316289");
+Admins.Add("76561198288728683");
 
 // list of all WebFishers
 List<WebFisher> AllPlayers = new();
@@ -111,13 +114,10 @@ void RunNetwork()
 
                     messagePlayer("[color=#000000][u]This server is running a prerelease version of Cove[/u][/color]", packet.Value.SteamId);
                     messagePlayer("[color=#000000][u]Cove is a community mod, it is unstable right now![/u][/color]", packet.Value.SteamId);
-
-                    //Console.WriteLine("Sending player welcome message");
                 }
 
                 if ((string)packetInfo["type"] == "instance_actor" && (string)((Dictionary<string, object>)packetInfo["params"])["actor_type"] == "player")
                 {
-                    Console.WriteLine("Player has created player Instance!");
                     WebFisher thisPlayer = AllPlayers.Find(p => p.SteamId.Value == packet.Value.SteamId);
 
                     long actorID = (long)((Dictionary<string, object>)packetInfo["params"])["actor_id"];
@@ -128,7 +128,6 @@ void RunNetwork()
                     else
                     {
                         thisPlayer.PlayerInstanceID = actorID;
-                        //Console.WriteLine($"{thisPlayer.FisherName} has the player instance {thisPlayer.PlayerInstanceID}");
                     }
                 }
 
@@ -207,6 +206,12 @@ void RunNetwork()
     }
 }
 
+bool isPlayerAdmin(SteamId id)
+{
+    string adminSteamID = Admins.Find(a => long.Parse(a) == long.Parse(id.ToString()));
+    return adminSteamID is string;
+}
+
 void OnPlayerChat(string message, SteamId id)
 {
     WebFisher sender = AllPlayers.Find(p => p.SteamId == id);
@@ -219,7 +224,7 @@ void OnPlayerChat(string message, SteamId id)
         switch (command)
         {
             case "!users":
-
+                if (!isPlayerAdmin(id)) return;
                 string messageBody = "";
                 foreach (var player in AllPlayers)
                 {
@@ -231,16 +236,67 @@ void OnPlayerChat(string message, SteamId id)
                 break;
 
             case "!spawn":
+                if (!isPlayerAdmin(id)) return;
                 messagePlayer("spawning!", id);
                 spawnRainCloud();
                 break;
 
             case "!spawnfish":
+                if (!isPlayerAdmin(id)) return;
                 spawnFish();
                 break;
 
             case "!spawnm":
-                spawnFish("fish_spawn_alien"); // metetore
+                if (!isPlayerAdmin(id)) return;
+                spawnFish("fish_spawn_alien");
+                break;
+
+            case "!kick":
+                if (!isPlayerAdmin(id)) return;
+                var kickUser = message.Split(" ")[1].ToUpper();
+                WebFisher kickedplayer = AllPlayers.Find(p => p.FisherID == kickUser);
+                if (kickedplayer == null)
+                {
+                    messagePlayer("That's not a player!", id);
+                } else
+                {
+                    Dictionary<string,object> packet = new Dictionary<string,object>();
+                    packet["type"] = "kick";
+
+                    SteamNetworking.SendP2PPacket(kickedplayer.SteamId, writePacket(packet), nChannel: 2);
+
+                    messagePlayer($"Kicked {kickedplayer.FisherName}", id);
+                    messageGlobal($"{kickedplayer.FisherName} was kicked from the lobby!");
+                }
+                break;
+
+            case "!setjoinable":
+                {
+                    if (!isPlayerAdmin(id)) return;
+                    string arg = message.Split(" ")[1].ToLower();
+                    if (arg == "true")
+                    {
+                        gameLobby.SetJoinable(true);
+                        messagePlayer($"Opened lobby!", id);
+                        if (!codeOnly)
+                        {
+                            gameLobby.SetData("type", "public");
+                            messagePlayer($"Unhid server from server list", id);
+                        }
+                    } else if (arg == "false")
+                    {
+                        gameLobby.SetJoinable(false);
+                        messagePlayer($"Closed lobby!", id);
+                        if (!codeOnly)
+                        {
+                            gameLobby.SetData("type", "code_only");
+                            messagePlayer($"Hid server from server list", id);
+                        }
+                    } else
+                    {
+                        messagePlayer($"\"{arg}\" is not true or false!", id);
+                    }
+                }
                 break;
         }
     }
@@ -334,8 +390,8 @@ string SendLetter(SteamId to, SteamId from, string header, string body, string c
     letterPacket["type"] = "letter_received";
     letterPacket["to"] = (double)to.Value;
     Dictionary<string, object> data = new Dictionary<string, object>();
-    data["to"] = (double)to.Value;
-    data["from"] = (double)from.Value;
+    data["to"] = (double)to;
+    data["from"] = (double)from;
     data["header"] = header;
     data["body"] = body;
     data["closing"] = closing;
@@ -344,7 +400,7 @@ string SendLetter(SteamId to, SteamId from, string header, string body, string c
     data["items"] = new Dictionary<int, object>();
     letterPacket["data"] = data;
 
-    SteamNetworking.SendP2PPacket(to.AccountId, writePacket(letterPacket), nChannel: 2);
+    SteamNetworking.SendP2PPacket(to, writePacket(letterPacket), nChannel: 2);
 
     return (string)data["letter_id"];
 }
@@ -452,8 +508,6 @@ int hostSpawn()
             rainChance += .001f;
     }
 
-    //Console.WriteLine($"Spawning: \"{type}\"");
-
     switch (type)
     { 
     
@@ -471,7 +525,6 @@ int hostSpawn()
         case "rain":
             spawnRainCloud(); 
             break;
-
 
     }
 
@@ -497,7 +550,7 @@ void SteamMatchmaking_OnLobbyCreated(Result result, Steamworks.Data.Lobby Lobby)
     Lobby.SetData("version", WebFishingGameVersion);
     Lobby.SetData("code", LobbyCode);
     //Lobby.SetData("type", "public");
-    Lobby.SetData("type", "code_only");
+    Lobby.SetData("type", codeOnly ? "code_only" : "public");
     Lobby.SetData("public", "true");
     Lobby.SetData("banned_players", "");
     Lobby.SetData("lurefilter", "dedicated"); // make the server showup in lure's dedicated section!
