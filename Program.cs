@@ -1,13 +1,14 @@
 ﻿using Steamworks;
 using Steamworks.Data;
-using System.Threading;
-
+using WFSermver;
 
 var _exitEvent = new ManualResetEvent(false);
 var WebFishingGameVersion = "1.08";
 int MaxPlayers = 50;
 string ServerName = "Always Fishing 24/7!";
-string LobbyCode = "fish";
+string LobbyCode = "blorb"; //"fish";
+
+float rainChance = 0f;
 
 string[] Admins = new string[2];
 Admins[0] = "76561199177316289"; // Uhh
@@ -15,19 +16,39 @@ Admins[0] = "76561199177316289"; // Uhh
 // list of all WebFishers
 List<WebFisher> AllPlayers = new();
 
-// get all the spawn points for fish!
-List<Vector3> fish_points = WFSermver.ReadWorldFile.readPoints("fish_spawn", File.ReadAllText($"{AppDomain.CurrentDomain.BaseDirectory}worlds/main_zone.tscn"));
+Console.WriteLine("Loading world!");
+string worldFile = $"{AppDomain.CurrentDomain.BaseDirectory}worlds/main_zone.tscn";
+if (!File.Exists(worldFile))
+{
 
-try {
+    Console.WriteLine("-- ERROR --");
+    Console.WriteLine("main_zone.tscn is missing!");
+    Console.WriteLine("please put a world file in the /worlds folder so the server may load it!");
+    Console.WriteLine("Press any key to exit");
+
+    Console.ReadKey();
+
+    _exitEvent.Set(); // allow the process to end!
+    return;
+}
+
+// get all the spawn points for fish!
+List<Vector3> fish_points = WFSermver.ReadWorldFile.readPoints("fish_spawn", File.ReadAllText(worldFile));
+List<Vector3> trash_points = WFSermver.ReadWorldFile.readPoints("trash_point", File.ReadAllText(worldFile));
+List<Vector3> shoreline_points = WFSermver.ReadWorldFile.readPoints("shoreline_point", File.ReadAllText(worldFile));
+
+Console.WriteLine("World Loaded!");
+
+List<WFInstance> serverOwnedInstances = new();
+Steamworks.Data.Lobby gameLobby = new Steamworks.Data.Lobby();
+
+try
+{
     SteamClient.Init(3146520, false);
 } catch( SystemException e) {
     Console.WriteLine(e.Message);
     return;
 }
-
-// setup a steamworks update timer!
-var steamworksTimer = new System.Timers.Timer(1); // An update rate of 120hz
-Steamworks.Data.Lobby gameLobby = new Steamworks.Data.Lobby();
 
 Dictionary<string, object> readPacket(byte[] packetBytes)
 {
@@ -86,12 +107,12 @@ void RunNetwork()
                     hostPacket["type"] = "recieve_host";
                     hostPacket["host_id"] = SteamClient.SteamId.Value.ToString();
 
-                    SendAllPlayer(hostPacket);
+                    sendPacketToPlayers(hostPacket);
 
-                    SendPlayerChat("[color=#000000][u]This server is running a prerelease version of Cove[/u][/color]", packet.Value.SteamId);
-                    SendPlayerChat("[color=#000000][u]Cove is a community mod, it is unstable right now![/u][/color]", packet.Value.SteamId);
+                    messagePlayer("[color=#000000][u]This server is running a prerelease version of Cove[/u][/color]", packet.Value.SteamId);
+                    messagePlayer("[color=#000000][u]Cove is a community mod, it is unstable right now![/u][/color]", packet.Value.SteamId);
 
-                    Console.WriteLine("Sending player welcome message");
+                    //Console.WriteLine("Sending player welcome message");
                 }
 
                 if ((string)packetInfo["type"] == "instance_actor" && (string)((Dictionary<string, object>)packetInfo["params"])["actor_type"] == "player")
@@ -107,7 +128,7 @@ void RunNetwork()
                     else
                     {
                         thisPlayer.PlayerInstanceID = actorID;
-                        Console.WriteLine($"{thisPlayer.FisherName} has the player instance {thisPlayer.PlayerInstanceID}");
+                        //Console.WriteLine($"{thisPlayer.FisherName} has the player instance {thisPlayer.PlayerInstanceID}");
                     }
                 }
 
@@ -163,25 +184,27 @@ void RunNetwork()
             {
                 Dictionary<string, object> packetInfo = readPacket(GzipHelper.DecompressGzip(packet.Value.Data));
 
-                //Console.WriteLine($"2 > '{packetInfo["type"]}'");
-
                 if ((string)packetInfo["type"] == "actor_action")
                 {
-                    //Console.WriteLine("--- Print Start ---");
-                    //printStringDict(packetInfo);
-                    //Console.WriteLine("--- Print End ---");
                     if ((string)packetInfo["action"] == "_sync_create_bubble")
                     {
                         string Message = (string)((Dictionary<int, object>)packetInfo["params"])[0];
                         OnPlayerChat(Message, packet.Value.SteamId);
                     }
+                    if ((string)packetInfo["action"] == "_wipe_actor")
+                    {
+                        long actorToWipe = (long)((Dictionary<int, object>)packetInfo["params"])[0];
+                        WFInstance serverInst = serverOwnedInstances.Find(i => (long)i.InstanceID == actorToWipe);
+                        if (serverInst != null)
+                        {
+                            Console.WriteLine("Removing Server Instance!");
+                            serverOwnedInstances.Remove(serverInst);
+                        }
+                    }
                 }
-
             }
         }
-
     }
-
 }
 
 void OnPlayerChat(string message, SteamId id)
@@ -208,7 +231,7 @@ void OnPlayerChat(string message, SteamId id)
                 break;
 
             case "!spawn":
-                SendPlayerChat("spawning!", id);
+                messagePlayer("spawning!", id);
                 spawnRainCloud();
                 break;
 
@@ -230,7 +253,7 @@ void spawnRainCloud()
 
     rainSpawnPacket["type"] = "instance_actor";
 
-    // {"actor_type": actor_type, "at": at, "zone": zone, "actor_id": id, "creator_id": creator, "data": data}
+    int IId = new Random().Next();
 
     Dictionary<string, object> instanceSpacePrams = new Dictionary<string, object>();
     rainSpawnPacket["params"] = instanceSpacePrams;
@@ -238,11 +261,12 @@ void spawnRainCloud()
     instanceSpacePrams["actor_type"] = "raincloud";
     instanceSpacePrams["at"] = new Vector3(rand.Next(-100,150), 42, rand.Next(-150, 100));
     instanceSpacePrams["zone"] = "main_zone";
-    instanceSpacePrams["actor_id"] = -1;
+    instanceSpacePrams["actor_id"] = IId;
     instanceSpacePrams["creator_id"] = (string)SteamClient.SteamId.Value.ToString();
     instanceSpacePrams["data"] = new Dictionary<string, object>();
 
-    SendAllPlayer(rainSpawnPacket); // spawn the rain!
+    sendPacketToPlayers(rainSpawnPacket); // spawn the rain!
+    serverOwnedInstances.Add(new WFInstance(IId, "raincloud"));
 }
 
 void spawnFish(string fishType = "fish_spawn")
@@ -251,19 +275,20 @@ void spawnFish(string fishType = "fish_spawn")
 
     spawnPacket["type"] = "instance_actor";
 
-    // {"actor_type": actor_type, "at": at, "zone": zone, "actor_id": id, "creator_id": creator, "data": data}
+    int IId = new Random().Next();
 
     Dictionary<string, object> instanceSpacePrams = new Dictionary<string, object>();
     spawnPacket["params"] = instanceSpacePrams;
 
     instanceSpacePrams["actor_type"] = fishType;
-    instanceSpacePrams["at"] = new Vector3(28.45f, 1.75f, -0.093f); //fish_points[(new Random()).Next(fish_points.Count - 1)];
+    instanceSpacePrams["at"] = fish_points[(new Random()).Next(fish_points.Count - 1)];
     instanceSpacePrams["zone"] = "main_zone";
-    instanceSpacePrams["actor_id"] = -1;
+    instanceSpacePrams["actor_id"] = IId;
     instanceSpacePrams["creator_id"] = (string)SteamClient.SteamId.Value.ToString();
     instanceSpacePrams["data"] = new Dictionary<string, object>();
 
-    SendAllPlayer(spawnPacket); // spawn the rain!
+    sendPacketToPlayers(spawnPacket); // spawn the rain!
+    serverOwnedInstances.Add(new WFInstance(IId, fishType));
 }
 
 void printArray(Dictionary<int, object> obj, string sub = "")
@@ -301,13 +326,6 @@ void printStringDict(Dictionary<string, object> obj, string sub = "")
     }
 }
 
-/*
-steamworksTimer.Elapsed += SteamworksTimer_Elapsed;
-steamworksTimer.AutoReset = true;
-steamworksTimer.Enabled = true; // start the timer!
-steamworksTimer.Start();
-*/
-
 // returns the letter id!
 string SendLetter(SteamId to, SteamId from, string header, string body, string closing, string user)
 {
@@ -331,7 +349,7 @@ string SendLetter(SteamId to, SteamId from, string header, string body, string c
     return (string)data["letter_id"];
 }
 
-void SendAllPlayer(Dictionary<string, object> packet)
+void sendPacketToPlayers(Dictionary<string, object> packet)
 {
     byte[] packetBytes = writePacket(packet);
     // get all players in the lobby
@@ -342,7 +360,7 @@ void SendAllPlayer(Dictionary<string, object> packet)
     }
 }
 
-void SendGlobalChat(string msg)
+void messageGlobal(string msg)
 {
     Dictionary<string, object> chatPacket = new();
     chatPacket["type"] = "message";
@@ -358,7 +376,7 @@ void SendGlobalChat(string msg)
     }
 }
 
-void SendPlayerChat(string msg, SteamId id)
+void messagePlayer(string msg, SteamId id)
 {
     Dictionary<string, object> chatPacket = new();
     chatPacket["type"] = "message";
@@ -378,23 +396,91 @@ void MessageTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
     pongPacket["time"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
     pongPacket["from"] = SteamClient.SteamId.Value.ToString();
 
-    SendAllPlayer(pongPacket);
+    sendPacketToPlayers(pongPacket);
 
     Dictionary<string, object> pingPacket = new();
     pingPacket["type"] = "request_ping";
     pingPacket["sender"] = SteamClient.SteamId.Value.ToString();
 
-    SendAllPlayer(pingPacket);
+    sendPacketToPlayers(pingPacket);
 
     Dictionary<string, object> hostPacket = new();
     hostPacket["type"] = "recieve_host";
     hostPacket["host_id"] = SteamClient.SteamId.Value.ToString();
 
-    SendAllPlayer(hostPacket);
+    sendPacketToPlayers(hostPacket);
 }
 messageTimer.AutoReset = true;
 messageTimer.Enabled = true; // start the timer!
 messageTimer.Start();
+
+var hostSpawnTimer = new Repeat(hostSpawn, 10000);
+// port of the _host_spawn_object(): in the world.gd script from the game!
+int hostSpawn()
+{
+
+    bool isRaining = false;
+    WFInstance rain = serverOwnedInstances.Find(i => i.Type == "raincloud");
+    if (rain != null)
+    {
+        if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - rain.SpawnTime.ToUnixTimeSeconds() > 540)
+        {
+            // its stop raining!
+            serverOwnedInstances.Remove(rain);
+        }
+        isRaining = true;
+    }
+
+    Random ran = new Random();
+    string[] beginningTypes = new string[2];
+    beginningTypes[0] = "fish";
+    beginningTypes[1] = "none";
+    string type = beginningTypes[ran.Next() % 2];
+    
+    if (ran.NextSingle() < 0.01 && ran.NextSingle() < 0.4)
+    {
+        type = "meteor";
+    }
+
+    if (ran.NextSingle() < rainChance && ran.NextSingle() < .12f)
+    {
+        type = "rain";
+        rainChance = 0;
+    } else
+    {
+        if (ran.NextSingle() < .75f)
+            rainChance += .001f;
+    }
+
+    //Console.WriteLine($"Spawning: \"{type}\"");
+
+    switch (type)
+    { 
+    
+        case "none":
+            break;
+
+        case "fish":
+            spawnFish();
+            break;
+
+        case "meteor":
+            spawnFish("fish_spawn_alien");
+            break;
+
+        case "rain":
+            spawnRainCloud(); 
+            break;
+
+
+    }
+
+
+    return 0;
+}
+hostSpawnTimer.Start();
+hostSpawn();
+
 
 void updatePlayercount()
 {
