@@ -8,3 +8,5 @@ Cove is a dedicated server for webfishing written in C#!
 Cove is a implementation of the WebFishing network protocall in a CLI meaning it dosent require Godot or anything other than Steamworks!
 
 To run you must have Steam open and running and have WebFishing on that currently logged in steam account!
+
+and yes, i am well awear the code is hot garbage
