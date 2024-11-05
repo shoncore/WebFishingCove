@@ -12,7 +12,7 @@ public class WebFisher
     public WebFisher(SteamId id, string fisherName)
     {
         this.SteamId = id;
-        string randomID = new string(Enumerable.Range(0, 5).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
+        string randomID = new string(Enumerable.Range(0, 3).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
         FisherID = randomID;
         FisherName = fisherName;
 

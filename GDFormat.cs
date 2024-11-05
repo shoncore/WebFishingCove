@@ -110,7 +110,7 @@ public class GodotPacketDeserializer {
 
         if (type != (int) GodotTypes.dictionaryValue)
         {
-            throw new Exception("Unable to decode a non-dictionary godot packet!");
+            //throw new Exception("Unable to decode a non-dictionary godot packet!");
         }
 
         Dictionary<string, object> dic = new Dictionary<string, object>();
@@ -119,7 +119,7 @@ public class GodotPacketDeserializer {
         {
             dic = readDictionary();
         } catch (Exception e) {
-            Console.WriteLine("Error reading packet!"); // incase we do have a error!
+            Console.WriteLine("-- Error reading packet! --"); // incase we do have a error!
             Console.WriteLine(e.ToString()); // incase we do have a error!
         }
 

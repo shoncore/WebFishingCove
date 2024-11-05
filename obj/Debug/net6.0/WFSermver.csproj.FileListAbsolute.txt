@@ -19,3 +19,4 @@ C:\Users\theen\Desktop\WFSermver\obj\Debug\net6.0\refint\WFSermver.dll
 C:\Users\theen\Desktop\WFSermver\obj\Debug\net6.0\WFSermver.pdb
 C:\Users\theen\Desktop\WFSermver\obj\Debug\net6.0\WFSermver.genruntimeconfig.cache
 C:\Users\theen\Desktop\WFSermver\obj\Debug\net6.0\ref\WFSermver.dll
+C:\Users\theen\Desktop\WFSermver\bin\Debug\net6.0\server.cfg

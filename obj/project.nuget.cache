@@ -1,17 +1,14 @@
 {
   "version": 2,
-  "dgSpecHash": "6ObtVEQ+gJo=",
+  "dgSpecHash": "s0OKMAMPMkRuaVInUTCbP6wAKnHLr1Vh6APLkhZIuJdVB1Ri1WgxOpE9ngjiua2x3E+/FBOxIAXl1j+xwMZI9Q==",
   "success": true,
   "projectFilePath": "C:\\Users\\theen\\Desktop\\WFSermver\\WFSermver.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\theen\\.nuget\\packages\\facepunch.steamworks\\2.3.3\\facepunch.steamworks.2.3.3.nupkg.sha512",
-    "C:\\Users\\theen\\.nuget\\packages\\microsoft.netcore.app.ref\\6.0.35\\microsoft.netcore.app.ref.6.0.35.nupkg.sha512",
-    "C:\\Users\\theen\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\6.0.35\\microsoft.netcore.app.runtime.win-x64.6.0.35.nupkg.sha512",
-    "C:\\Users\\theen\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\6.0.35\\microsoft.windowsdesktop.app.ref.6.0.35.nupkg.sha512",
-    "C:\\Users\\theen\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\6.0.35\\microsoft.windowsdesktop.app.runtime.win-x64.6.0.35.nupkg.sha512",
-    "C:\\Users\\theen\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\6.0.35\\microsoft.aspnetcore.app.ref.6.0.35.nupkg.sha512",
-    "C:\\Users\\theen\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\6.0.35\\microsoft.aspnetcore.app.runtime.win-x64.6.0.35.nupkg.sha512",
-    "C:\\Users\\theen\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\6.0.35\\microsoft.netcore.app.host.win-x64.6.0.35.nupkg.sha512"
+    "C:\\Users\\theen\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\6.0.18\\microsoft.windowsdesktop.app.ref.6.0.18.nupkg.sha512",
+    "C:\\Users\\theen\\.nuget\\packages\\microsoft.netcore.app.ref\\6.0.18\\microsoft.netcore.app.ref.6.0.18.nupkg.sha512",
+    "C:\\Users\\theen\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\6.0.18\\microsoft.aspnetcore.app.ref.6.0.18.nupkg.sha512",
+    "C:\\Users\\theen\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\6.0.18\\microsoft.netcore.app.host.win-x64.6.0.18.nupkg.sha512"
   ],
   "logs": []
 }
