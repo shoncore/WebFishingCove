@@ -1,0 +1,66 @@
+name: Publish Nightly Release on Commit
+
+on:
+  push:
+    branches:
+      - main  # Trigger on pushes to main branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up .NET
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '6.0.x'  # Specify your .NET version
+
+      # Step 3: Restore dependencies
+      - name: Restore dependencies
+        run: dotnet restore
+
+      # Step 4: Publish the project
+      - name: Publish the application
+        run: dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true -p:PublishTrimmed=true -o ./publish
+
+      # Step 5: Zip the publish folder
+      - name: Zip the publish folder
+        run: zip -r ./publish/published_app.zip ./publish
+        
+      # Step 6: Delete existing nightly release and tag if it exists
+      - name: Delete existing nightly release and tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Find and delete existing release with tag 'nightly'
+          gh release delete nightly -y || true
+          # Delete existing tag 'nightly' if it exists
+          gh api -X DELETE repos/${{ github.repository }}/git/refs/tags/nightly || true
+
+      # Step 7: Create a nightly release
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "nightly"  # Static tag name for nightly builds
+          release_name: "nightly-${{ github.run_number }}"  # Unique name for each run
+          draft: false
+          prerelease: true  # Mark as prerelease if you want to differentiate
+
+      # Step 8: Upload published files to release
+      - name: Upload .NET Publish Artifacts
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./publish/published_app.zip
+          asset_name: win64.zip
+          asset_content_type: application/zip
