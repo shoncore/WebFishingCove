@@ -26,7 +26,7 @@ jobs:
 
       # Step 4: Publish the project
       - name: Publish the application
-        run: dotnet publish -c Release -o ./publish  # Output to ./publish folder
+        run: dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true -p:PublishTrimmed=true -o ./publish
 
       # Step 5: Zip the publish folder
       - name: Zip the publish folder
@@ -52,5 +52,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./publish/published_app.zip
-          asset_name: published_app.zip
+          asset_name: win64.zip
           asset_content_type: application/zip
