@@ -511,7 +511,7 @@ string SendLetter(SteamId to, SteamId from, string header, string body, string c
     data["body"] = body;
     data["closing"] = closing;
     data["user"] = user;
-    data["letter_id"] = new string(Enumerable.Range(0, 5).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
+    data["letter_id"] = new Random().Next();
     data["items"] = new Dictionary<int, object>();
     letterPacket["data"] = data;
 
