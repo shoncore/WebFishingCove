@@ -183,7 +183,7 @@ void OnNetworkPacket(P2Packet packet)
 
         if (isPlayerAdmin(packet.SteamId))
         {
-            messagePlayer("Your a admin on this server!", packet.SteamId);
+            messagePlayer("You're an admin on this server!", packet.SteamId);
         }
 
     }
