@@ -95,29 +95,19 @@ jobs:
         with:
           name: linux64
 
-      # Step 2: Delete existing nightly release and tag if it exists
-      - name: Delete existing nightly release and tag
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Find and delete existing release with tag 'nightly'
-          gh release delete nightly -y || true
-          # Delete existing tag 'nightly' if it exists
-          gh api -X DELETE repos/${{ github.repository }}/git/refs/tags/nightly || true
-
-      # Step 3: Create a new nightly release
+      # Step 2: Create a new nightly release
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: "nightly"  # Static tag name for nightly builds
+          tag_name: "nightly-${{ github.run_number }}"  # Static tag name for nightly builds
           release_name: "nightly-${{ github.run_number }}"  # Unique name for each run
           draft: false
           prerelease: true  # Mark as prerelease if you want to differentiate
 
-      # Step 4: Upload Windows artifact to release
+      # Step 3: Upload Windows artifact to release
       - name: Upload Windows Build to Release
         uses: actions/upload-release-asset@v1
         env:
@@ -128,7 +118,7 @@ jobs:
           asset_name: win64.zip
           asset_content_type: application/zip
 
-      # Step 5: Upload Linux artifact to release
+      # Step 4: Upload Linux artifact to release
       - name: Upload Linux Build to Release
         uses: actions/upload-release-asset@v1
         env:
