@@ -14,9 +14,6 @@ float rainChance = 0f;
 
 List<string> Admins = new();
 
-Admins.Add("76561199177316289");
-Admins.Add("76561198288728683");
-
 // list of all WebFishers
 List<WebFisher> AllPlayers = new();
 
@@ -89,6 +86,33 @@ foreach (string key in config.Keys)
 
 Console.WriteLine("Server setup based on config!");
 
+void readAdmins()
+{
+    Dictionary<string, string> config = ConfigReader.ReadConfig("admins.cfg");
+
+    Admins.Clear();
+
+    foreach (string key in config.Keys)
+    {
+        if (config[key].ToLower() == "true")
+        {
+            Console.WriteLine($"Added {key} as admin!");
+            Admins.Add(key);
+            WebFisher player = AllPlayers.Find(p => p.SteamId.Value.ToString() == key);
+            if (player != null)
+            {
+                messagePlayer("You are an admin on this server!", player.SteamId);
+            }
+        }
+    }
+
+}
+
+Console.WriteLine("Reading admins!");
+readAdmins();
+Console.WriteLine("Setup finished, starting server!");
+
+
 List<WFInstance> serverOwnedInstances = new();
 Steamworks.Data.Lobby gameLobby = new Steamworks.Data.Lobby();
 
@@ -156,6 +180,12 @@ void OnNetworkPacket(P2Packet packet)
             "Github > https://xr0.xyz/cove";
 
         SendLetter(packet.SteamId, SteamClient.SteamId, "About Cove (The server)", LetterBody, "Happy fishing! - ", "Fries");
+
+        if (isPlayerAdmin(packet.SteamId))
+        {
+            messagePlayer("Your a admin on this server!", packet.SteamId);
+        }
+
     }
 
     if ((string)packetInfo["type"] == "instance_actor" && (string)((Dictionary<string, object>)packetInfo["params"])["actor_type"] == "player")
@@ -219,9 +249,9 @@ void OnNetworkPacket(P2Packet packet)
     {
         string type = (string)((Dictionary<string, object>)packetInfo["params"])["actor_type"];
         long actorID = (long)((Dictionary<string, object>)packetInfo["params"])["actor_id"];
-        Console.WriteLine($"User spawned Instance {type}");
 
-        if (type == "meteor" || type == "fish" || type == "fish")
+        // all actor types that should not be spawned by anyone but the server!
+        if (type == "meteor" || type == "fish" || type == "rain")
         {
             WebFisher offendingPlayer = AllPlayers.Find(p => p.SteamId == packet.SteamId);
 
@@ -374,6 +404,13 @@ void OnPlayerChat(string message, SteamId id)
                     {
                         messagePlayer($"\"{arg}\" is not true or false!", id);
                     }
+                }
+                break;
+
+            case "!updateadmins":
+                {
+                    if (!isPlayerAdmin(id)) return;
+                    readAdmins();
                 }
                 break;
         }
@@ -665,8 +702,6 @@ void SteamMatchmaking_OnLobbyMemberJoined(Steamworks.Data.Lobby Lobby, Friend us
     AllPlayers.Add(newPlayer);
 
     Console.WriteLine($"{userJoining.Name} has been assigned the fisherID: {newPlayer.FisherID}");
-    
-    Console.WriteLine($"Player count: {gameLobby.MemberCount - 1}");
 }
 
 SteamMatchmaking.OnLobbyMemberLeave += SteamMatchmaking_OnLobbyMemberLeave;
@@ -684,8 +719,6 @@ void SteamMatchmaking_OnLobbyMemberLeave(Steamworks.Data.Lobby Lobby, Friend use
             Console.WriteLine($"{userLeaving.Name} has been removed!");
         }
     }
-
-    Console.WriteLine($"Player count: {gameLobby.MemberCount - 1}");
 }
 
 SteamNetworking.OnP2PSessionRequest += void (SteamId id) => {

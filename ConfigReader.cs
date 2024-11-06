@@ -19,7 +19,7 @@ namespace WFSermver
             string[] fileLines = fileContent.Split("\n");
             Dictionary<string, string> configValues = new Dictionary<string, string>();
 
-            for (int i = 0; i < fileLines.Length-1; i++)
+            for (int i = 0; i < fileLines.Length; i++)
             {
                 string line = fileLines[i].Trim();
                 // if the line is a comment
