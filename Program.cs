@@ -517,7 +517,7 @@ string SendLetter(SteamId to, SteamId from, string header, string body, string c
 
     SteamNetworking.SendP2PPacket(to, writePacket(letterPacket), nChannel: 2);
 
-    return (string)data["letter_id"];
+    return data["letter_id"];
 }
 
 void sendPacketToPlayers(Dictionary<string, object> packet)
