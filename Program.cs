@@ -6,7 +6,7 @@ using WFSermver;
 var _exitEvent = new ManualResetEvent(false);
 var WebFishingGameVersion = "1.08";
 int MaxPlayers = 50;
-string ServerName = "Cove Dedicated Server";
+string ServerName = "A Cove Dedicated Server";
 string LobbyCode = new string(Enumerable.Range(0, 5).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
 bool codeOnly = true;
 
