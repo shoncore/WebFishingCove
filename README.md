@@ -23,7 +23,7 @@ Cove is a implementation of the WebFishing network protocall in a CLI meaning it
 > and Steam must be logged into a account that has WebFishing in it's library 
 
 1. Download
-	- You can download the most recent version of the server here: [Nightly Releases](https://github.com/DrMeepso/WebFishingCove/releases/tag/nightly)
+	- You can download the most recent version of the server here: [Nightly Releases](https://github.com/DrMeepso/WebFishingCove/tags)
 	- A new build is made everytime code is changed so it may update quite alot!
 
 2. Decompile WebFishing

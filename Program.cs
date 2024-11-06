@@ -433,7 +433,7 @@ void spawnRainCloud()
     instanceSpacePrams["at"] = new Vector3(rand.Next(-100,150), 42, rand.Next(-150, 100));
     instanceSpacePrams["zone"] = "main_zone";
     instanceSpacePrams["actor_id"] = IId;
-    instanceSpacePrams["creator_id"] = (string)SteamClient.SteamId.Value.ToString();
+    instanceSpacePrams["creator_id"] = (long)SteamClient.SteamId.Value;
     instanceSpacePrams["data"] = new Dictionary<string, object>();
 
     sendPacketToPlayers(rainSpawnPacket); // spawn the rain!
@@ -455,7 +455,7 @@ void spawnFish(string fishType = "fish_spawn")
     instanceSpacePrams["at"] = fish_points[(new Random()).Next(fish_points.Count - 1)];
     instanceSpacePrams["zone"] = "main_zone";
     instanceSpacePrams["actor_id"] = IId;
-    instanceSpacePrams["creator_id"] = (string)SteamClient.SteamId.Value.ToString();
+    instanceSpacePrams["creator_id"] = (long)SteamClient.SteamId.Value;
     instanceSpacePrams["data"] = new Dictionary<string, object>();
 
     sendPacketToPlayers(spawnPacket); // spawn the rain!
@@ -503,7 +503,7 @@ string SendLetter(SteamId to, SteamId from, string header, string body, string c
     // Crashes the game lmao
     Dictionary<string, object> letterPacket = new();
     letterPacket["type"] = "letter_received";
-    letterPacket["to"] = (double)to.Value;
+    letterPacket["to"] = (string)to.Value.ToString();
     Dictionary<string, object> data = new Dictionary<string, object>();
     data["to"] = (double)to;
     data["from"] = (double)from;
