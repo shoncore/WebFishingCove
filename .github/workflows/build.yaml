@@ -6,7 +6,8 @@ on:
       - main  # Trigger on pushes to main branch
 
 jobs:
-  build:
+  # Windows Build Job
+  windows-build:
     runs-on: ubuntu-latest
 
     steps:
@@ -14,7 +15,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Set up .NET
+      # Step 2: Set up .NET for Windows
       - name: Set up .NET
         uses: actions/setup-dotnet@v3
         with:
@@ -24,14 +25,14 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      # Step 4: Publish the project
-      - name: Publish the application
+      # Step 4: Publish the project as a single file for Windows 64-bit
+      - name: Publish the application (Windows)
         run: dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true -p:PublishTrimmed=true -o ./publish
 
-      # Step 5: Zip the publish folder
-      - name: Zip the publish folder
-        run: zip -r ./publish/published_app.zip ./publish
-        
+      # Step 5: Zip the Windows publish folder
+      - name: Zip the Windows publish folder
+        run: zip -r ./publish/win64.zip ./publish
+
       # Step 6: Delete existing nightly release and tag if it exists
       - name: Delete existing nightly release and tag
         env:
@@ -54,13 +55,55 @@ jobs:
           draft: false
           prerelease: true  # Mark as prerelease if you want to differentiate
 
-      # Step 8: Upload published files to release
-      - name: Upload .NET Publish Artifacts
+      # Step 8: Upload Windows build to release
+      - name: Upload Windows Build Artifact
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./publish/published_app.zip
+          asset_path: ./publish/win64.zip
           asset_name: win64.zip
+          asset_content_type: application/zip
+
+  # Linux Build Job
+  linux-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up .NET for Linux
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '6.0.x'  # Specify your .NET version
+
+      # Step 3: Restore dependencies
+      - name: Restore dependencies
+        run: dotnet restore
+
+      # Step 4: Publish the project as a single file for Linux 64-bit
+      - name: Publish the application (Linux)
+        run: dotnet publish -c Release -r linux-x64 -p:PublishSingleFile=true -p:PublishTrimmed=true -o ./publish
+
+      # Step 5: Copy the native library
+      - name: Copy libsteam_api.so to publish folder
+        run: cp ./NativeLibraries/linux64/libsteam_api.so ./publish/
+
+      # Step 6: Zip the Linux publish folder
+      - name: Zip the Linux publish folder
+        run: zip -r ./publish/linux64.zip ./publish
+
+      # Step 7: Upload Linux build to release
+      - name: Upload Linux Build Artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.windows-build.outputs.create_release.outputs.upload_url }}
+          asset_path: ./publish/linux64.zip
+          asset_name: linux64.zip
           asset_content_type: application/zip
