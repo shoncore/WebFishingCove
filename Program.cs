@@ -498,7 +498,7 @@ void printStringDict(Dictionary<string, object> obj, string sub = "")
 }
 
 // returns the letter id!
-string SendLetter(SteamId to, SteamId from, string header, string body, string closing, string user)
+int SendLetter(SteamId to, SteamId from, string header, string body, string closing, string user)
 {
     // Crashes the game lmao
     Dictionary<string, object> letterPacket = new();
@@ -517,7 +517,7 @@ string SendLetter(SteamId to, SteamId from, string header, string body, string c
 
     SteamNetworking.SendP2PPacket(to, writePacket(letterPacket), nChannel: 2);
 
-    return data["letter_id"];
+    return (int)data["letter_id"];
 }
 
 void sendPacketToPlayers(Dictionary<string, object> packet)
