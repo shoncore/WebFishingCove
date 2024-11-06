@@ -31,8 +31,18 @@ jobs:
       # Step 5: Zip the publish folder
       - name: Zip the publish folder
         run: zip -r ./publish/published_app.zip ./publish
+        
+      # Step 6: Delete existing nightly release and tag if it exists
+      - name: Delete existing nightly release and tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Find and delete existing release with tag 'nightly'
+          gh release delete nightly -y || true
+          # Delete existing tag 'nightly' if it exists
+          gh api -X DELETE repos/${{ github.repository }}/git/refs/tags/nightly || true
 
-      # Step 6: Create a nightly release
+      # Step 7: Create a nightly release
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
@@ -44,7 +54,7 @@ jobs:
           draft: false
           prerelease: true  # Mark as prerelease if you want to differentiate
 
-      # Step 7: Upload published files to release
+      # Step 8: Upload published files to release
       - name: Upload .NET Publish Artifacts
         uses: actions/upload-release-asset@v1
         env:
