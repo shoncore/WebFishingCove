@@ -156,13 +156,6 @@ void OnNetworkPacket(P2Packet packet)
 {
     Dictionary<string, object> packetInfo = readPacket(GzipHelper.DecompressGzip(packet.Data));
 
-    //printStringDict(packetInfo);
-
-    if ((string)packetInfo["type"] == "send_ping")
-    {
-        //printStringDict(packetInfo);
-    }
-
     if ((string)packetInfo["type"] == "handshake_request")
     {
         Dictionary<string, object> handshakePacket = new();
@@ -176,7 +169,6 @@ void OnNetworkPacket(P2Packet packet)
     // tell the client who actualy owns the session!
     if ((string)packetInfo["type"] == "new_player_join")
     {
-        printStringDict(packetInfo);
 
         messagePlayer("This is a Cove dedicated server!", packet.SteamId);
         messagePlayer("Please report any issues to the github (xr0.xyz/cove)", packet.SteamId);
@@ -254,7 +246,6 @@ void OnNetworkPacket(P2Packet packet)
                 Console.WriteLine($"Player asked to remove {serverInst.Type} actor");
 
                 // the sever owns the instance
-                Console.WriteLine("Removing Server Instance!");
                 removeServerActor(serverInst);
             }
         }

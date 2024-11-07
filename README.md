@@ -46,3 +46,8 @@ Because of this emulation to run the server you must run it from a steam account
 4. Run!
 	- Run the server EXE and enjoy! 
 	- Please be respectful and dont name the servers anything stupid!
+
+
+# Other info
+
+[My Ko-Fi](https://ko-fi.com/drmeepso)
