@@ -2,8 +2,8 @@
 Cove is a dedicated server for WebFishing written in C#!
 
 > [!IMPORTANT]  
-> Cove is currently in less than a Beta state, things are hard coded and buggy.
-> It is not recommended to use as of right now!
+> Cove is currently in a Beta state.
+> If you encounter any large issues or bugs please let me know!
 
 Cove is a implementation of the WebFishing network protocall in a CLI meaning it dosent require Godot or anything other than Steamworks!
 
