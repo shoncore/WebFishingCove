@@ -16,12 +16,11 @@ Because of this emulation to run the server you must run it from a steam account
 
 
 # Todo
-- [ ] Spawn actors required for the Metal Detector
-- [ ] Move entire server into a Program class (idk why .net gave me a classless program)
-- [ ] Improve error handling
+- [X] Spawn actors required for the Metal Detector
+- [X] Move entire server into a Program class (idk why .net gave me a classless program)
+- [X] Improve error handling
 - [ ] Improve GoDot serialization both ways
 - [X] Add proper support for actor handling (its okay atm)
-- [ ] Add spawns for metal detector items
 - [ ] Some sort of plugin or modding support (maybe)
 
 # How to run:

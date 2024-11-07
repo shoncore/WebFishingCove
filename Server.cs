@@ -27,6 +27,7 @@ namespace WFSermver
         List<Vector3> fish_points;
         List<Vector3> trash_points;
         List<Vector3> shoreline_points;
+        List<Vector3> hidden_spot;
 
         public void Init()
         {
@@ -51,9 +52,11 @@ namespace WFSermver
             }
 
             // get all the spawn points for fish!
-            fish_points = ReadWorldFile.readPoints("fish_spawn", File.ReadAllText(worldFile));
-            trash_points = ReadWorldFile.readPoints("trash_point", File.ReadAllText(worldFile));
-            shoreline_points = ReadWorldFile.readPoints("shoreline_point", File.ReadAllText(worldFile));
+            string mapFile = File.ReadAllText(worldFile);
+            fish_points = ReadWorldFile.readPoints("fish_spawn", mapFile);
+            trash_points = ReadWorldFile.readPoints("trash_point", mapFile);
+            shoreline_points = ReadWorldFile.readPoints("shoreline_point", mapFile);
+            hidden_spot = ReadWorldFile.readPoints("hidden_spot", mapFile);
 
             Console.WriteLine("World Loaded!");
 
@@ -133,6 +136,8 @@ namespace WFSermver
             Repeat hostSpawnTimer = new Repeat(hostSpawn, 10000);
             hostSpawnTimer.Start();
 
+            Repeat hostSpawnMetalTimer = new Repeat(hostSpawnMetal, 10000);
+            hostSpawnMetalTimer.Start();
 
             SteamMatchmaking.OnLobbyCreated += OnLobbyCreated;
             void OnLobbyCreated(Result result, Steamworks.Data.Lobby Lobby)
@@ -305,6 +310,10 @@ namespace WFSermver
                 {
                     removeServerActor(inst);
                 }
+                if (inst.Type == "void_portal" && instanceAge > 600)
+                {
+                    removeServerActor(inst);
+                }
             }
 
             // dont spawn too many because it WILL LAG players!
@@ -335,6 +344,11 @@ namespace WFSermver
                     rainChance += .001f;
             }
 
+            if (ran.NextSingle() < 0.01 && ran.NextSingle() < 0.25)
+            {
+                type = "void_portal";
+            }
+
             switch (type)
             {
 
@@ -353,7 +367,22 @@ namespace WFSermver
                     spawnRainCloud();
                     break;
 
+                case "void_portal":
+                    spawnVoidPortal();
+                    break;
+
             }
+
+            return 0;
+        }
+
+        int hostSpawnMetal()
+        {
+            int metalCount = serverOwnedInstances.FindAll(a => a.Type == "metal_spawn").Count;
+            if (metalCount > 7)
+                return 0;
+
+            spawnMetal();
 
             return 0;
         }
@@ -396,21 +425,4 @@ void printStringDict(Dictionary<string, object> obj, string sub = "")
         }
     }
 }
-*/
-
-/*
-// request player pings
-var messageTimer = new System.Timers.Timer(5000); // An update rate of 5 seconds
-messageTimer.Elapsed += MessageTimer_Elapsed;
-void MessageTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
-{
-    Dictionary<string, object> pingPacket = new();
-    pingPacket["type"] = "request_ping";
-    pingPacket["sender"] = SteamClient.SteamId.Value.ToString();
-
-    sendPacketToPlayers(pingPacket);
-}
-messageTimer.AutoReset = true;
-messageTimer.Enabled = true; // start the timer!
-messageTimer.Start();
 */

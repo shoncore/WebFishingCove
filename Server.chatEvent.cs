@@ -32,20 +32,44 @@ namespace WFSermver
 
                         break;
 
-                    case "!spawnrain":
-                        if (!isPlayerAdmin(id)) return;
-                        messagePlayer("spawning!", id);
-                        spawnRainCloud();
-                        break;
+                    case "!spawn":
+                        {
+                            if (!isPlayerAdmin(id)) return;
 
-                    case "!spawnfish":
-                        if (!isPlayerAdmin(id)) return;
-                        spawnFish();
-                        break;
+                            var actorType = message.Split(" ")[1].ToLower();
+                            bool spawned = false;
+                            switch(actorType)
+                            {
+                                case "rain":
+                                    spawnRainCloud();
+                                    spawned = true;
+                                    break;
 
-                    case "!spawnmeteor":
-                        if (!isPlayerAdmin(id)) return;
-                        spawnFish("fish_spawn_alien");
+                                case "fish":
+                                    spawnFish();
+                                    spawned = true;
+                                    break;
+
+                                case "meteor":
+                                    spawned = true;
+                                    spawnFish("fish_spawn_alien");
+                                    break;
+
+                                case "portal":
+                                    spawnVoidPortal();
+                                    serverOwnedInstances.Last().pos = sender.PlayerPosition; // move it to the player
+                                    spawned = true;
+                                    break;
+                            }
+                            if (spawned)
+                            {
+                                messagePlayer($"Spawned {actorType}", id);
+                            }
+                            else
+                            {
+                                messagePlayer($"\"{actorType}\" is not a spawnable actor!", id);
+                            }
+                        }
                         break;
 
                     case "!kick":
@@ -99,7 +123,7 @@ namespace WFSermver
                         }
                         break;
 
-                    case "!updateadmins":
+                    case "!refreshadmins":
                         {
                             if (!isPlayerAdmin(id)) return;
                             readAdmins();
@@ -110,17 +134,6 @@ namespace WFSermver
                         {
                             messagePlayer("hello world!", id);
                             Console.WriteLine("Talking to player");
-                        }
-                        break;
-
-                    case "!wiperain":
-                        {
-                            if (!isPlayerAdmin(id)) return;
-                            WFInstance rain = serverOwnedInstances.Find(i => i.Type == "raincloud");
-                            if (rain != null)
-                            {
-                                removeServerActor(rain);
-                            }
                         }
                         break;
                 }

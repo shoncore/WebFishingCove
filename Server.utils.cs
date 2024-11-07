@@ -59,6 +59,28 @@ namespace WFSermver
 
         void spawnFish(string fishType = "fish_spawn")
         {
+            Vector3 pos = fish_points[(new Random()).Next(fish_points.Count)];
+            spawnGenericActor(fishType, pos);
+        }
+
+        void spawnVoidPortal()
+        {
+            Vector3 pos = hidden_spot[(new Random()).Next(hidden_spot.Count)];
+            spawnGenericActor("void_portal", pos);
+        }
+
+        void spawnMetal()
+        {
+            Vector3 pos = trash_points[(new Random()).Next(trash_points.Count)];
+            if (new Random().NextSingle() < .15f)
+            {
+                pos = shoreline_points[(new Random()).Next(shoreline_points.Count)];
+            }
+            spawnGenericActor("metal_spawn", pos);
+        }
+
+        WFInstance spawnGenericActor(string type, Vector3 pos = null)
+        {
             Dictionary<string, object> spawnPacket = new Dictionary<string, object>();
 
             spawnPacket["type"] = "instance_actor";
@@ -68,9 +90,13 @@ namespace WFSermver
             Dictionary<string, object> instanceSpacePrams = new Dictionary<string, object>();
             spawnPacket["params"] = instanceSpacePrams;
 
-            Vector3 pos = fish_points[(new Random()).Next(fish_points.Count - 1)];
+            if (pos == null)
+                pos = Vector3.zero;
 
-            instanceSpacePrams["actor_type"] = fishType;
+            WFInstance actor = new WFInstance(IId, "void_portal", pos);
+            serverOwnedInstances.Add(actor);
+
+            instanceSpacePrams["actor_type"] = "void_portal";
             instanceSpacePrams["at"] = pos;
             instanceSpacePrams["rot"] = new Vector3(0, 0, 0);
             instanceSpacePrams["zone"] = "main_zone";
@@ -79,7 +105,8 @@ namespace WFSermver
             instanceSpacePrams["creator_id"] = (long)SteamClient.SteamId.Value;
 
             sendPacketToPlayers(spawnPacket); // spawn the rain!
-            serverOwnedInstances.Add(new WFInstance(IId, fishType, pos));
+
+            return actor;
         }
 
         void spawnServerPlayerActor(SteamId id)
