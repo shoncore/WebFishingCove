@@ -27,9 +27,46 @@ public class WFInstance
     public string Type { get; set; }
     public System.DateTimeOffset SpawnTime = DateTimeOffset.UtcNow;
 
-    public WFInstance(int ID, string Type)
+    public Vector3 pos { get; set; }
+    public Vector3 rot { get; set; }
+
+    public WFInstance(int ID, string Type, Vector3 entPos, Vector3 entRot = null)
     {
         this.InstanceID = ID;
         this.Type = Type;
+        this.pos = entPos;
+        if (entRot != null)
+        {
+            this.rot = entRot;
+        } else {
+            this.rot = Vector3.zero;
+        }
+    }
+
+    public virtual void onUpdate()
+    {
+
+    }
+}
+
+public class RainCloud : WFInstance
+{
+
+    public Vector3 toCenter;
+    public float wanderDirection;
+
+    public RainCloud(int ID, Vector3 entPos) : base (109, "raincloud", Vector3.zero)
+    {
+        this.pos = entPos;
+        this.InstanceID = ID;
+
+        toCenter = (pos - new Vector3(30, 40, -50)).Normalized();
+        wanderDirection = new Vector2(toCenter.x, toCenter.z).Angle();
+    }
+
+    public override void onUpdate()
+    {
+        Vector2 dir = new Vector2(-1, 0).Rotate(wanderDirection) * (0.17f / 4.5f);
+        pos += new Vector3(dir.x, 0, dir.y);
     }
 }
