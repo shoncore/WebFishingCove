@@ -7,8 +7,16 @@ Cove is a dedicated server for WebFishing written in C#!
 
 Cove is a implementation of the WebFishing network protocall in a CLI meaning it dosent require Godot or anything other than Steamworks!
 
-# Todo
+# How it works
+Cove uses none of WebFishing's code, insted it used C# to emulate the same network calls that the offical game would make to host a lobby!
 
+Things like event spawning all had to be written from scratch to allow for the portability of C#! (also because i dont know GDScript)
+
+Because of this emulation to run the server you must run it from a steam account that owns the game and that has steam open in the background
+
+
+# Todo
+- [ ] Spawn actors required for the Metal Detector
 - [ ] Move entire server into a Program class (idk why .net gave me a classless program)
 - [ ] Improve error handling
 - [ ] Improve GoDot serialization both ways
