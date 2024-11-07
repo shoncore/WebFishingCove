@@ -782,7 +782,7 @@ void SteamMatchmaking_OnLobbyCreated(Result result, Steamworks.Data.Lobby Lobby)
 
     SteamNetworking.AllowP2PPacketRelay(true);
 
-    Lobby.SetData("server_browser_value", "1"); // i have no idea!
+    Lobby.SetData("server_browser_value", "0"); // i have no idea!
 
     Console.WriteLine("Lobby Created!");
     Console.WriteLine($"Lobby Code: {Lobby.GetData("code")}");
