@@ -123,11 +123,19 @@ namespace WFSermver
                     Dictionary<string, object> kickPacket = new Dictionary<string, object>();
                     kickPacket["type"] = "kick";
 
-                    SteamNetworking.SendP2PPacket(packet.SteamId, writePacket(kickPacket), nChannel: 2);
+                    sendPacketToPlayer(kickPacket, packet.SteamId);
 
                     messageGlobal($"{offendingPlayer.FisherName} was kicked for spawning illegal actors");
                 }
             }
+
+            if ((string)packetInfo["type"] == "request_actors")
+            {
+                sendPlayerAllServerActors(packet.SteamId);
+                sendPacketToPlayer(createRequestActorResponce(), packet.SteamId); // this is empty because otherwise all the server actors are invisible!
+
+            }
+
         }
     }
 }

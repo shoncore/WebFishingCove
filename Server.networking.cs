@@ -1,6 +1,7 @@
 ﻿using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,6 +30,12 @@ namespace WFSermver
                 if (member.Id == SteamClient.SteamId.Value) continue;
                 SteamNetworking.SendP2PPacket(member.Id, packetBytes, nChannel: 2);
             }
+        }
+
+        void sendPacketToPlayer(Dictionary<string, object> packet, SteamId id)
+        {
+            byte[] packetBytes = writePacket(packet);
+            SteamNetworking.SendP2PPacket(id, packetBytes, nChannel: 2);
         }
     }
 }

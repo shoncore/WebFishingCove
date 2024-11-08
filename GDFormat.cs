@@ -513,8 +513,10 @@ public class GodotWriter
     private static void writeString(string packet, BinaryWriter bw)
     {
         bw.Write((int) 4); // remeber to write the string header!
-        bw.Write((int) packet.Length);
+
         byte[] bytes = Encoding.UTF8.GetBytes(packet);
+        
+        bw.Write((int)bytes.Length);
         // get the ammount to pad by!
 
         // Step 3: Write the actual bytes of the string

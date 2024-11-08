@@ -60,6 +60,12 @@ namespace WFSermver
                                     serverOwnedInstances.Last().pos = sender.PlayerPosition; // move it to the player
                                     spawned = true;
                                     break;
+
+                                case "metal":
+                                    spawnMetal();
+                                    serverOwnedInstances.Last().pos = sender.PlayerPosition; // move it to the player
+                                    spawned = true;
+                                    break;
                             }
                             if (spawned)
                             {

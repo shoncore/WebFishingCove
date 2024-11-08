@@ -314,6 +314,7 @@ namespace WFSermver
                 {
                     removeServerActor(inst);
                 }
+                //setActorZone(inst, "main_zone", -1);
             }
 
             // dont spawn too many because it WILL LAG players!
@@ -378,6 +379,9 @@ namespace WFSermver
 
         int hostSpawnMetal()
         {
+            // still got no idea
+            gameLobby.SetData("server_browser_value", "0");
+
             int metalCount = serverOwnedInstances.FindAll(a => a.Type == "metal_spawn").Count;
             if (metalCount > 7)
                 return 0;

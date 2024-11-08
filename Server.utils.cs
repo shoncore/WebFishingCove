@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -93,10 +94,10 @@ namespace WFSermver
             if (pos == null)
                 pos = Vector3.zero;
 
-            WFInstance actor = new WFInstance(IId, "void_portal", pos);
+            WFInstance actor = new WFInstance(IId, type, pos);
             serverOwnedInstances.Add(actor);
 
-            instanceSpacePrams["actor_type"] = "void_portal";
+            instanceSpacePrams["actor_type"] = type;
             instanceSpacePrams["at"] = pos;
             instanceSpacePrams["rot"] = new Vector3(0, 0, 0);
             instanceSpacePrams["zone"] = "main_zone";
@@ -107,6 +108,28 @@ namespace WFSermver
             sendPacketToPlayers(spawnPacket); // spawn the rain!
 
             return actor;
+        }
+
+        void sendPlayerAllServerActors(SteamId id)
+        {
+            foreach (WFInstance actor in serverOwnedInstances)
+            {
+                Dictionary<string, object> spawnPacket = new Dictionary<string, object>();
+                spawnPacket["type"] = "instance_actor";
+
+                Dictionary<string, object> instanceSpacePrams = new Dictionary<string, object>();
+                spawnPacket["params"] = instanceSpacePrams;
+
+                instanceSpacePrams["actor_type"] = actor.Type;
+                instanceSpacePrams["at"] = actor.pos;
+                instanceSpacePrams["rot"] = new Vector3(0, 0, 0);
+                instanceSpacePrams["zone"] = "main_zone";
+                instanceSpacePrams["zone_owner"] = -1;
+                instanceSpacePrams["actor_id"] = actor.InstanceID;
+                instanceSpacePrams["creator_id"] = (long)SteamClient.SteamId.Value;
+
+                sendPacketToPlayer(spawnPacket, id); // spawn the rain!
+            }
         }
 
         void spawnServerPlayerActor(SteamId id)
@@ -205,6 +228,22 @@ namespace WFSermver
             serverOwnedInstances.Remove(instance);
         }
 
+        void setActorZone(WFInstance instance, string zoneName, int zoneOwner)
+        {
+            Dictionary<string, object> removePacket = new();
+            removePacket["type"] = "actor_action";
+            removePacket["actor_id"] = instance.InstanceID;
+            removePacket["action"] = "_set_zone";
+
+            Dictionary<int, object> prams = new Dictionary<int, object>();
+            removePacket["params"] = prams;
+
+            prams[0] = zoneName;
+            prams[1] = zoneOwner;
+
+            sendPacketToPlayers(removePacket); // remove
+        }
+
         bool isPlayerAdmin(SteamId id)
         {
             string adminSteamID = Admins.Find(a => long.Parse(a) == long.Parse(id.ToString()));
@@ -226,6 +265,18 @@ namespace WFSermver
             closePacket["type"] = "server_close";
 
             sendPacketToPlayers(closePacket);
+        }
+
+        public Dictionary<string, object> createRequestActorResponce()
+        {
+            Dictionary <string, object> createPacket = new();
+
+            createPacket["type"] = "actor_request_send";
+
+            Dictionary<int, object> actorArray = new();
+            createPacket["list"] = actorArray;
+
+            return createPacket;
         }
 
     }
