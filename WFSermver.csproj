@@ -13,9 +13,6 @@
 
   <ItemGroup>
     <!-- Windows DLL -->
-    <None Update="admins.cfg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="NativeLibraries/win64/steam_api64.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>steam_api64.dll</TargetPath>
@@ -26,12 +23,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>steam_api.dll</TargetPath>
     </None>
-    <None Update="server.cfg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="admins.cfg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    
+    <EmbeddedResource Include="server.cfg"></EmbeddedResource>
+    <EmbeddedResource Include="admins.cfg"></EmbeddedResource>
 
     <Content Include="worlds\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

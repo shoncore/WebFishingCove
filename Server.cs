@@ -6,11 +6,12 @@ namespace WFSermver
 {
     public partial class Server
     {
-        string WebFishingGameVersion = "1.08";
+        string WebFishingGameVersion = "1.09";
         int MaxPlayers = 50;
         string ServerName = "A Cove Dedicated Server";
         string LobbyCode = new string(Enumerable.Range(0, 5).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
         bool codeOnly = true;
+        bool ageRestricted = false;
 
         float rainChance = 0f;
 
@@ -100,15 +101,35 @@ namespace WFSermver
                         WebFishingGameVersion = config[key];
                         break;
 
+                    case "ageRestricted":
+                        {
+                            if (config[key].ToLower() == "true")
+                            {
+                                ageRestricted = true;
+                            }
+                            else if (config[key].ToLower() == "false")
+                            {
+                                ageRestricted = false;
+                            }
+                            else
+                            {
+                                Console.WriteLine($"\"{config[key]}\" is not true or false!");
+                            }
+                        }
+                        break;
+
                     default:
                         Console.WriteLine($"\"{key}\" is not a supported config option!");
-                        break;
+                        continue;
                 }
+
+                Console.WriteLine($"Set \"{key}\" to \"{config[key]}\"");
+
             }
 
             Console.WriteLine("Server setup based on config!");
 
-            Console.WriteLine("Reading admins!");
+            Console.WriteLine("Reading admins.cfg");
             readAdmins();
             Console.WriteLine("Setup finished, starting server!");
 
@@ -149,7 +170,7 @@ namespace WFSermver
                 Lobby.SetData("type", codeOnly ? "code_only" : "public");
                 Lobby.SetData("public", "true");
                 Lobby.SetData("banned_players", "");
-                Lobby.SetData("age_limit", "false");
+                Lobby.SetData("age_limit", ageRestricted ? "true" : "false");
                 Lobby.SetData("cap", MaxPlayers.ToString());
 
                 SteamNetworking.AllowP2PPacketRelay(true);
@@ -157,7 +178,10 @@ namespace WFSermver
                 Lobby.SetData("server_browser_value", "0"); // i have no idea!
 
                 Console.WriteLine("Lobby Created!");
-                Console.WriteLine($"Lobby Code: {Lobby.GetData("code")}");
+                Console.Write("Lobby Code: ");
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine(Lobby.GetData("code"));
+                Console.ResetColor();
 
                 gameLobby = Lobby;
 

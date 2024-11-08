@@ -7,6 +7,7 @@ Cove is a dedicated server for WebFishing written in C#!
 
 > [!IMPORTANT]  
 > Cove is currently in a Semmi-Stable state.
+>
 > If you encounter any large issues or bugs please let me know!
 
 Cove is a implementation of the WebFishing network protocall in a CLI meaning it dosent require Godot or anything other than Steamworks!
@@ -36,7 +37,7 @@ Because of this emulation to run the server you must run it from a steam account
 
 1. Download
 	- You can download the most recent version of the server here: [Nightly Releases](https://github.com/DrMeepso/WebFishingCove/tags)
-	- Or if you want the latest stable version it is here: [Version 21](https://github.com/DrMeepso/WebFishingCove/releases/tag/nightly-21)
+	- Or if you want the latest stable version it is here: [Latest Release](https://github.com/DrMeepso/WebFishingCove/releases/latest)
 	- A new build is made everytime code is changed so it may update quite alot!
 
 2. Decompile WebFishing
@@ -44,6 +45,7 @@ Because of this emulation to run the server you must run it from a steam account
 	- The `main_map.tscn` file can be found here in the WebFishing project `/Scenes/Map`
 
 3. Change settings
+	- If you dont see the config files (server.cfg & admins.cfg) run the server once and they should be created in the same place the application is!
 	- You can modify the settings in the server.cgf file with all the info you want!
 	- Too add a admin put there Steam64ID in the admins.cfg file with a ` = true` after it!
 	- I.E. `76561198288728683 = true`
@@ -55,4 +57,4 @@ Because of this emulation to run the server you must run it from a steam account
 
 # Other info
 
-If you wanna to support me and my work here is my [Ko-Fi](https://ko-fi.com/drmeepso) :3
+If you wanna to support me and my work, here is my [Ko-Fi](https://ko-fi.com/drmeepso) :3

@@ -133,7 +133,6 @@ namespace WFSermver
             {
                 sendPlayerAllServerActors(packet.SteamId);
                 sendPacketToPlayer(createRequestActorResponce(), packet.SteamId); // this is empty because otherwise all the server actors are invisible!
-
             }
 
         }
