@@ -251,7 +251,7 @@ namespace WFSermver
 
         void updatePlayercount()
         {
-            string serverName = $"{ServerName} ({gameLobby.MemberCount - 1}/{MaxPlayers}) (Dedicated)\n";
+            string serverName = $"{ServerName}";
             gameLobby.SetData("lobby_name", serverName); // not sure what this dose rn
             gameLobby.SetData("name", serverName);
 
