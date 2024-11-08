@@ -1,8 +1,12 @@
+﻿> [!NOTE]  
+> ## Cove 1.0! 🥳
+> As of WebFishing v1.09 cove implements all fetures from the main game making it a parallel experience compared to the actual game!
+
 # Webfishing Cove
 Cove is a dedicated server for WebFishing written in C#!
 
 > [!IMPORTANT]  
-> Cove is currently in a Beta state.
+> Cove is currently in a Semmi-Stable state.
 > If you encounter any large issues or bugs please let me know!
 
 Cove is a implementation of the WebFishing network protocall in a CLI meaning it dosent require Godot or anything other than Steamworks!
@@ -27,9 +31,12 @@ Because of this emulation to run the server you must run it from a steam account
 > [!NOTE]  
 > To run a server you must have Steam open on the computer you wish to run the server on
 > and Steam must be logged into a account that has WebFishing in it's library 
+> 
+> Also please note you can't join the server on the account you are hosting it on!
 
 1. Download
 	- You can download the most recent version of the server here: [Nightly Releases](https://github.com/DrMeepso/WebFishingCove/tags)
+	- Or if you want the latest stable version it is here: [Version 21](https://github.com/DrMeepso/WebFishingCove/releases/tag/nightly-21)
 	- A new build is made everytime code is changed so it may update quite alot!
 
 2. Decompile WebFishing
@@ -48,4 +55,4 @@ Because of this emulation to run the server you must run it from a steam account
 
 # Other info
 
-[My Ko-Fi](https://ko-fi.com/drmeepso)
+If you wanna to support me and my work here is my [Ko-Fi](https://ko-fi.com/drmeepso) :3
