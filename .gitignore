@@ -9,3 +9,4 @@ bin/
 # main zone / island file that contains spawn positions of items and things!
 /worlds/*.tscn
 WFServer/worlds/main_zone.tscn
+Cove/worlds/main_zone.tscn

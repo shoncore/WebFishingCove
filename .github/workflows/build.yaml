@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./WFServer
+        working-directory: ./Cove
 
     steps:
       # Step 1: Checkout the code
@@ -41,14 +41,14 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: win64
-          path: ./WFServer/publish/win64.zip
+          path: ./Cove/publish/win64.zip
 
   # Linux Build Job
   linux-build:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./WFServer
+        working-directory: ./Cove
     steps:
       # Step 1: Checkout the code
       - name: Checkout code
@@ -81,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: linux64
-          path: ./WFServer/publish/linux64.zip
+          path: ./Cove/publish/linux64.zip
 
   # Create Release Job
   create-release:
