@@ -41,7 +41,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: win64
-          path: ./publish/win64.zip
+          path: ./WFServer/publish/win64.zip
 
   # Linux Build Job
   linux-build:
@@ -81,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: linux64
-          path: ./publish/linux64.zip
+          path: ./WFServer/publish/linux64.zip
 
   # Create Release Job
   create-release:
