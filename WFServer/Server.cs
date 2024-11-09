@@ -385,12 +385,6 @@ namespace WFServer
                 //setActorZone(inst, "main_zone", -1);
             }
 
-            // dont spawn too many because it WILL LAG players!
-            if (serverOwnedInstances.Count > 15)
-            {
-                return 0;
-            }
-
             Random ran = new Random();
             string[] beginningTypes = new string[2];
             beginningTypes[0] = "fish";
@@ -425,6 +419,9 @@ namespace WFServer
                     break;
 
                 case "fish":
+                    // dont spawn too many because it WILL LAG players!
+                    if (serverOwnedInstances.Count > 15)
+                        return 0;
                     spawnFish();
                     break;
 
