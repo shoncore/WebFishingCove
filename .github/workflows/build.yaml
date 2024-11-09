@@ -21,23 +21,24 @@ jobs:
         with:
           dotnet-version: '6.0.x'  # Specify your .NET version
 
-      - name: Move to dir
-        run: cd WFServer
-
       # Step 3: Restore dependencies
       - name: Restore dependencies
+        working-directory: ./WFServer
         run: dotnet restore
 
       # Step 4: Publish the project as a single file for Windows 64-bit
       - name: Publish the application (Windows)
+        working-directory: ./WFServer
         run: dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true -p:PublishTrimmed=true -o ./publish
 
       # Step 5: Zip the Windows publish folder
       - name: Zip the Windows publish folder
+        working-directory: ./WFServer
         run: zip -r ./publish/win64.zip ./publish
 
       # Step 6: Upload the Windows build as an artifact to be used in release
       - name: Upload Windows Build Artifact
+        working-directory: ./WFServer
         uses: actions/upload-artifact@v3
         with:
           name: win64
@@ -58,27 +59,29 @@ jobs:
         with:
           dotnet-version: '6.0.x'  # Specify your .NET version
 
-      - name: Move to dir
-        run: cd WFServer
-
       # Step 3: Restore dependencies
       - name: Restore dependencies
+        working-directory: ./WFServer
         run: dotnet restore
 
       # Step 4: Publish the project as a single file for Linux 64-bit
       - name: Publish the application (Linux)
+        working-directory: ./WFServer
         run: dotnet publish -c Release -r linux-x64 -p:PublishSingleFile=true -p:PublishTrimmed=true -o ./publish
 
       # Step 5: Copy the native library
       - name: Copy libsteam_api.so to publish folder
+        working-directory: ./WFServer
         run: cp ./NativeLibraries/linux64/libsteam_api.so ./publish/
 
       # Step 6: Zip the Linux publish folder
       - name: Zip the Linux publish folder
+        working-directory: ./WFServer
         run: zip -r ./publish/linux64.zip ./publish
 
       # Step 7: Upload the Linux build as an artifact to be used in release
       - name: Upload Linux Build Artifact
+        working-directory: ./WFServer
         uses: actions/upload-artifact@v3
         with:
           name: linux64
