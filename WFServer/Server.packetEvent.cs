@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace WFSermver
+namespace WFServer
 {
     partial class Server
     {
@@ -54,7 +54,7 @@ namespace WFSermver
 
             if ((string)packetInfo["type"] == "instance_actor" && (string)((Dictionary<string, object>)packetInfo["params"])["actor_type"] == "player")
             {
-                WebFisher thisPlayer = AllPlayers.Find(p => p.SteamId.Value == packet.SteamId);
+                WFPlayer thisPlayer = AllPlayers.Find(p => p.SteamId.Value == packet.SteamId);
 
                 long actorID = (long)((Dictionary<string, object>)packetInfo["params"])["actor_id"];
                 if (thisPlayer == null)
@@ -69,7 +69,7 @@ namespace WFSermver
 
             if ((string)packetInfo["type"] == "actor_update")
             {
-                WebFisher thisPlayer = AllPlayers.Find(p => p.PlayerInstanceID == (long)packetInfo["actor_id"]);
+                WFPlayer thisPlayer = AllPlayers.Find(p => p.PlayerInstanceID == (long)packetInfo["actor_id"]);
                 if (thisPlayer != null)
                 {
                     Vector3 position = (Vector3)packetInfo["pos"];
@@ -98,7 +98,7 @@ namespace WFSermver
                 if ((string)packetInfo["action"] == "_wipe_actor")
                 {
                     long actorToWipe = (long)((Dictionary<int, object>)packetInfo["params"])[0];
-                    WFInstance serverInst = serverOwnedInstances.Find(i => (long)i.InstanceID == actorToWipe);
+                    WFActor serverInst = serverOwnedInstances.Find(i => (long)i.InstanceID == actorToWipe);
                     if (serverInst != null)
                     {
                         Console.WriteLine($"Player asked to remove {serverInst.Type} actor");
@@ -117,7 +117,7 @@ namespace WFSermver
                 // all actor types that should not be spawned by anyone but the server!
                 if (type == "meteor" || type == "fish" || type == "rain")
                 {
-                    WebFisher offendingPlayer = AllPlayers.Find(p => p.SteamId == packet.SteamId);
+                    WFPlayer offendingPlayer = AllPlayers.Find(p => p.SteamId == packet.SteamId);
 
                     // kick the player because the spawned in a actor that only the server should be able to spawn!
                     Dictionary<string, object> kickPacket = new Dictionary<string, object>();

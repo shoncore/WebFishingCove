@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace WFSermver
+namespace WFServer
 {
     internal class ReadWorldFile
     {

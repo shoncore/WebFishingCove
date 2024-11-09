@@ -1,6 +1,6 @@
 ﻿using System.Timers;
 
-namespace WFSermver
+namespace WFServer
 {
     public class Repeat
     {

@@ -1,25 +1,26 @@
 ﻿using Steamworks;
 using Steamworks.Data;
-using WFSermver;
+using System.Numerics;
+using WFServer;
 
-namespace WFSermver
+namespace WFServer
 {
     public partial class Server
     {
-        string WebFishingGameVersion = "1.09";
-        int MaxPlayers = 50;
-        string ServerName = "A Cove Dedicated Server";
-        string LobbyCode = new string(Enumerable.Range(0, 5).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
-        bool codeOnly = true;
-        bool ageRestricted = false;
+        private string WebFishingGameVersion = "1.09";
+        public int MaxPlayers = 50;
+        public string ServerName = "A Cove Dedicated Server";
+        private string LobbyCode = new string(Enumerable.Range(0, 5).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
+        public bool codeOnly = true;
+        public bool ageRestricted = false;
 
         float rainChance = 0f;
 
         List<string> Admins = new();
 
-        public List<WebFisher> AllPlayers = new();
+        public List<WFPlayer> AllPlayers = new();
 
-        List<WFInstance> serverOwnedInstances = new();
+        public List<WFActor> serverOwnedInstances = new();
         public Steamworks.Data.Lobby gameLobby = new Steamworks.Data.Lobby();
 
         Thread cbThread;
@@ -118,6 +119,23 @@ namespace WFSermver
                         }
                         break;
 
+                    case "pluginsEnabled":
+                        {
+                            if (config[key].ToLower() == "true")
+                            {
+                                arePluginsEnabled = true;
+                            }
+                            else if (config[key].ToLower() == "false")
+                            {
+                                arePluginsEnabled = false;
+                            }
+                            else
+                            {
+                                Console.WriteLine($"\"{config[key]}\" is not true or false!");
+                            }
+                        }
+                        break;
+
                     default:
                         Console.WriteLine($"\"{key}\" is not a supported config option!");
                         continue;
@@ -132,6 +150,15 @@ namespace WFSermver
             Console.WriteLine("Reading admins.cfg");
             readAdmins();
             Console.WriteLine("Setup finished, starting server!");
+
+            if (Directory.Exists($"{AppDomain.CurrentDomain.BaseDirectory}plugins"))
+            {
+                loadAllPlugins();
+            } else
+            {
+                Directory.CreateDirectory($"{AppDomain.CurrentDomain.BaseDirectory}plugins");
+                Console.WriteLine("Created plugins folder!");
+            }
 
             try
             {
@@ -194,10 +221,16 @@ namespace WFSermver
                 Console.WriteLine($"{userJoining.Name} [{userJoining.Id}] has joined the game!");
                 updatePlayercount();
 
-                WebFisher newPlayer = new WebFisher(userJoining.Id, userJoining.Name);
+                WFPlayer newPlayer = new WFPlayer(userJoining.Id, userJoining.Name);
                 AllPlayers.Add(newPlayer);
 
                 Console.WriteLine($"{userJoining.Name} has been assigned the fisherID: {newPlayer.FisherID}");
+            
+                foreach (PluginInstance plugin in loadedPlugins)
+                {
+                    plugin.plugin.onPlayerJoin(newPlayer);
+                }
+            
             };
 
             SteamMatchmaking.OnLobbyMemberLeave += void (Lobby Lobby, Friend userLeaving) =>
@@ -209,6 +242,12 @@ namespace WFSermver
                 {
                     if (player.SteamId == userLeaving.Id)
                     {
+
+                        foreach (PluginInstance plugin in loadedPlugins)
+                        {
+                            plugin.plugin.onPlayerLeave(player);
+                        }
+
                         AllPlayers.Remove(player);
                         Console.WriteLine($"{userLeaving.Name} has been removed!");
                     }
@@ -277,7 +316,12 @@ namespace WFSermver
         {
             updateI++;
 
-            foreach (WFInstance actor in serverOwnedInstances)
+            foreach (PluginInstance plugin in loadedPlugins)
+            {
+                plugin.plugin.onUpdate();
+            }
+
+            foreach (WFActor actor in serverOwnedInstances)
             {
                 if (actor is RainCloud)
                 {
@@ -319,7 +363,7 @@ namespace WFSermver
         {
 
             // remove old instances!
-            foreach (WFInstance inst in serverOwnedInstances)
+            foreach (WFActor inst in serverOwnedInstances)
             {
                 float instanceAge = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - inst.SpawnTime.ToUnixTimeSeconds();
                 if (inst.Type == "fish_spawn_alien" && instanceAge > 120)

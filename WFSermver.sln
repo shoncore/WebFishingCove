@@ -3,14 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33424.131
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WFSermver", "WFSermver.csproj", "{0AD974D1-F022-4AD4-85E6-7B061B9B4853}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{56EA7538-5EA3-462D-82D4-A2D0D6427B33}"
-	ProjectSection(SolutionItems) = preProject
-		GODotFormat.cs = GODotFormat.cs
-		GZip.cs = GZip.cs
-		README.md = README.md
-	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WFServer", "WFServer\WFServer.csproj", "{5DFA780A-A814-4407-82D7-C5F2322BCCC5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatCommands", "ChatCommands\ChatCommands.csproj", "{69E77746-AF52-42D3-961B-D95DCEB696DE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,10 +15,14 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{0AD974D1-F022-4AD4-85E6-7B061B9B4853}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0AD974D1-F022-4AD4-85E6-7B061B9B4853}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0AD974D1-F022-4AD4-85E6-7B061B9B4853}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0AD974D1-F022-4AD4-85E6-7B061B9B4853}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5DFA780A-A814-4407-82D7-C5F2322BCCC5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5DFA780A-A814-4407-82D7-C5F2322BCCC5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5DFA780A-A814-4407-82D7-C5F2322BCCC5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5DFA780A-A814-4407-82D7-C5F2322BCCC5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{69E77746-AF52-42D3-961B-D95DCEB696DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{69E77746-AF52-42D3-961B-D95DCEB696DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{69E77746-AF52-42D3-961B-D95DCEB696DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{69E77746-AF52-42D3-961B-D95DCEB696DE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

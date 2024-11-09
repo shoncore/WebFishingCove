@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace WFSermver
+namespace WFServer
 {
     partial class Server
     {
@@ -21,7 +21,7 @@ namespace WFSermver
             return GzipHelper.CompressGzip(godotBytes);
         }
 
-        void sendPacketToPlayers(Dictionary<string, object> packet)
+        public void sendPacketToPlayers(Dictionary<string, object> packet)
         {
             byte[] packetBytes = writePacket(packet);
             // get all players in the lobby
@@ -32,7 +32,7 @@ namespace WFSermver
             }
         }
 
-        void sendPacketToPlayer(Dictionary<string, object> packet, SteamId id)
+        public void sendPacketToPlayer(Dictionary<string, object> packet, SteamId id)
         {
             byte[] packetBytes = writePacket(packet);
             SteamNetworking.SendP2PPacket(id, packetBytes, nChannel: 2);
