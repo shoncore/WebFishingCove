@@ -8,3 +8,4 @@ bin/
 # World Files should be supplyed yourself when you run the server.
 # main zone / island file that contains spawn positions of items and things!
 /worlds/*.tscn
+WFServer/worlds/main_zone.tscn
