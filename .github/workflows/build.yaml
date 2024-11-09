@@ -46,7 +46,9 @@ jobs:
   # Linux Build Job
   linux-build:
     runs-on: ubuntu-latest
-
+    defaults:
+      run:
+        working-directory: ./WFServer
     steps:
       # Step 1: Checkout the code
       - name: Checkout code
