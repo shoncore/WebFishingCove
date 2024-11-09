@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Reflection;
 
-namespace WFServer
+namespace Cove.Server.Utils
 {
     public class ConfigReader
     {
@@ -15,7 +10,8 @@ namespace WFServer
             if (File.Exists(filePath))
             {
                 return ReadFile(File.ReadAllText(filePath));
-            } else
+            }
+            else
             {
                 bool assemblyHasConfig = false;
                 string resourceName = Assembly.GetExecutingAssembly().GetName().Name;
@@ -33,10 +29,11 @@ namespace WFServer
                     Console.WriteLine($"Using default {fileName}, it has been added to the root directory for editing!");
                     Console.ResetColor();
 
-                    File.WriteAllText(filePath, fileContence );
+                    File.WriteAllText(filePath, fileContence);
 
                     return ReadFile(fileContence);
-                } else
+                }
+                else
                 {
                     throw new Exception($"Cannot find config file that is trying to be read: {fileName}");
                 }
@@ -55,7 +52,8 @@ namespace WFServer
 
                     return content;
 
-                } else
+                }
+                else
                 {
                     throw new Exception("Cant file file in sssembly!");
                 }

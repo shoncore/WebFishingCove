@@ -1,6 +1,4 @@
-﻿using System.Timers;
-
-namespace WFServer
+﻿namespace Cove.Server.Utils
 {
     public class Repeat
     {

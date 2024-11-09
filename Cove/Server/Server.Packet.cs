@@ -1,14 +1,11 @@
-﻿using Steamworks.Data;
-using Steamworks;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Steamworks;
+using Steamworks.Data;
+using Cove.GodotFormat;
+using Cove.Server.Actor;
 
-namespace WFServer
+namespace Cove.Server
 {
-    partial class Server
+    partial class CoveServer
     {
         void OnNetworkPacket(P2Packet packet)
         {
@@ -63,17 +60,17 @@ namespace WFServer
                 }
                 else
                 {
-                    thisPlayer.PlayerInstanceID = actorID;
+                    thisPlayer.InstanceID = actorID;
                 }
             }
 
             if ((string)packetInfo["type"] == "actor_update")
             {
-                WFPlayer thisPlayer = AllPlayers.Find(p => p.PlayerInstanceID == (long)packetInfo["actor_id"]);
+                WFPlayer thisPlayer = AllPlayers.Find(p => p.InstanceID == (long)packetInfo["actor_id"]);
                 if (thisPlayer != null)
                 {
                     Vector3 position = (Vector3)packetInfo["pos"];
-                    thisPlayer.PlayerPosition = position;
+                    thisPlayer.pos = position;
                 }
             }
 

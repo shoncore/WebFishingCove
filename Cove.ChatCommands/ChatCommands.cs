@@ -1,12 +1,13 @@
-﻿using Steamworks;
-using WFServer;
+﻿using Cove.Server;
+using Cove.Server.Actor;
+using Cove.Server.Plugins;
 
 public class ChatCommands : CovePlugin
 {
 
-    Server Server { get; set; } // lol
+    CoveServer Server { get; set; } // lol
 
-    public ChatCommands(Server server) : base(server) 
+    public ChatCommands(CoveServer server) : base(server)
     {
         Server = server;
     }
@@ -14,8 +15,6 @@ public class ChatCommands : CovePlugin
     public override void onInit()
     {
         base.onInit();
-
-        log("Chat commands are here!");
     }
 
     public override void onPlayerJoin(WFPlayer player)

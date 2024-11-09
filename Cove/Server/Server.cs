@@ -1,11 +1,13 @@
 ﻿using Steamworks;
 using Steamworks.Data;
-using System.Numerics;
-using WFServer;
+using Cove.Server.Plugins;
+using Cove.GodotFormat;
+using Cove.Server.Actor;
+using Cove.Server.Utils;
 
-namespace WFServer
+namespace Cove.Server
 {
-    public partial class Server
+    public partial class CoveServer
     {
         private string WebFishingGameVersion = "1.09";
         public int MaxPlayers = 50;
@@ -55,10 +57,10 @@ namespace WFServer
 
             // get all the spawn points for fish!
             string mapFile = File.ReadAllText(worldFile);
-            fish_points = ReadWorldFile.readPoints("fish_spawn", mapFile);
-            trash_points = ReadWorldFile.readPoints("trash_point", mapFile);
-            shoreline_points = ReadWorldFile.readPoints("shoreline_point", mapFile);
-            hidden_spot = ReadWorldFile.readPoints("hidden_spot", mapFile);
+            fish_points = WorldFile.readPoints("fish_spawn", mapFile);
+            trash_points = WorldFile.readPoints("trash_point", mapFile);
+            shoreline_points = WorldFile.readPoints("shoreline_point", mapFile);
+            hidden_spot = WorldFile.readPoints("hidden_spot", mapFile);
 
             Console.WriteLine("World Loaded!");
 
@@ -154,7 +156,8 @@ namespace WFServer
             if (Directory.Exists($"{AppDomain.CurrentDomain.BaseDirectory}plugins"))
             {
                 loadAllPlugins();
-            } else
+            }
+            else
             {
                 Directory.CreateDirectory($"{AppDomain.CurrentDomain.BaseDirectory}plugins");
                 Console.WriteLine("Created plugins folder!");
@@ -225,12 +228,12 @@ namespace WFServer
                 AllPlayers.Add(newPlayer);
 
                 Console.WriteLine($"{userJoining.Name} has been assigned the fisherID: {newPlayer.FisherID}");
-            
+
                 foreach (PluginInstance plugin in loadedPlugins)
                 {
                     plugin.plugin.onPlayerJoin(newPlayer);
                 }
-            
+
             };
 
             SteamMatchmaking.OnLobbyMemberLeave += void (Lobby Lobby, Friend userLeaving) =>
@@ -254,7 +257,8 @@ namespace WFServer
                 }
             };
 
-            SteamNetworking.OnP2PSessionRequest += void (SteamId id) => {
+            SteamNetworking.OnP2PSessionRequest += void (SteamId id) =>
+            {
                 foreach (Friend user in gameLobby.Members)
                 {
                     if (user.Id == id.Value)
@@ -310,7 +314,7 @@ namespace WFServer
 
         // how many ticks before the server send an update just incase
         int idelUpdateCount = 30;
-        Dictionary<int, Vector3> pastTransforms = new Dictionary<int, Vector3>();
+        Dictionary<long, Vector3> pastTransforms = new Dictionary<long, Vector3>();
         int updateI = 0;
         int actorUpdate()
         {
@@ -456,6 +460,19 @@ namespace WFServer
             return 0;
         }
 
+        void OnPlayerChat(string message, SteamId id)
+        {
+
+            WFPlayer sender = AllPlayers.Find(p => p.SteamId == id);
+            Console.WriteLine($"{sender.FisherName}: {message}");
+
+            foreach (PluginInstance plugin in loadedPlugins)
+            {
+                plugin.plugin.onChatMessage(sender, message);
+            }
+        }
+
+        // purely for debug
         void printStringDict(Dictionary<string, object> obj, string sub = "")
         {
             foreach (var kvp in obj)

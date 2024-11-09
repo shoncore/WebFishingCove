@@ -1,13 +1,9 @@
-﻿using Steamworks;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using WFServer;
+﻿using Cove;
+using Cove.Server;
+using Steamworks;
 
 ManualResetEvent _exitEvent = new ManualResetEvent(false);
-Server webfishingServer = new Server();
+CoveServer webfishingServer = new CoveServer();
 
 webfishingServer.Init(); // start the server
 
@@ -19,7 +15,7 @@ void Console_CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
     Dictionary<string, object> closePacket = new();
     closePacket["type"] = "server_close";
 
-    webfishingServer.disconnectPlayers();
+    webfishingServer.disconnectAllPlayers();
     webfishingServer.gameLobby.Leave(); // close the lobby
     SteamClient.Shutdown(); // if we are on
 }

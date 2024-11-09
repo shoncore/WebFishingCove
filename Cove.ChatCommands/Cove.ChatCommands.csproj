@@ -15,8 +15,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\WFServer\WFServer.csproj" />
     <EmbeddedResource Include="plugin.cfg"></EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cove\Cove.csproj" />
   </ItemGroup>
 
 </Project>

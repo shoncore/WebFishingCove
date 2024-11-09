@@ -1,15 +1,12 @@
 ﻿using Steamworks;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
+using Cove.Server.Plugins;
+using Cove.GodotFormat;
+using Cove.Server.Actor;
+using Cove.Server.Utils;
 
-namespace WFServer
+namespace Cove.Server
 {
-    partial class Server
+    partial class CoveServer
     {
         public void readAdmins()
         {
@@ -105,9 +102,24 @@ namespace WFServer
             instanceSpacePrams["actor_id"] = IId;
             instanceSpacePrams["creator_id"] = (long)SteamClient.SteamId.Value;
 
-            sendPacketToPlayers(spawnPacket); // spawn the rain!
+            sendPacketToPlayers(spawnPacket);
 
             return actor;
+        }
+
+        public void removeServerActor(WFActor instance)
+        {
+            Dictionary<string, object> removePacket = new();
+            removePacket["type"] = "actor_action";
+            removePacket["actor_id"] = instance.InstanceID;
+            removePacket["action"] = "queue_free";
+
+            Dictionary<int, object> prams = new Dictionary<int, object>();
+            removePacket["params"] = prams;
+
+            sendPacketToPlayers(removePacket); // remove
+
+            serverOwnedInstances.Remove(instance);
         }
 
         private void sendPlayerAllServerActors(SteamId id)
@@ -128,13 +140,17 @@ namespace WFServer
                 instanceSpacePrams["actor_id"] = actor.InstanceID;
                 instanceSpacePrams["creator_id"] = (long)SteamClient.SteamId.Value;
 
-                sendPacketToPlayer(spawnPacket, id); // spawn the rain!
+                sendPacketToPlayer(spawnPacket, id);
             }
         }
 
         // returns the letter id!
         int SendLetter(SteamId to, SteamId from, string header, string body, string closing, string user)
         {
+
+            // dosent work atm
+            return -1;
+
             // Crashes the game lmao
             Dictionary<string, object> letterPacket = new();
             letterPacket["type"] = "letter_received";
@@ -188,21 +204,6 @@ namespace WFServer
             SteamNetworking.SendP2PPacket(id, writePacket(chatPacket), nChannel: 2);
         }
 
-        public void removeServerActor(WFActor instance)
-        {
-            Dictionary<string, object> removePacket = new();
-            removePacket["type"] = "actor_action";
-            removePacket["actor_id"] = instance.InstanceID;
-            removePacket["action"] = "queue_free";
-
-            Dictionary<int, object> prams = new Dictionary<int, object>();
-            removePacket["params"] = prams;
-
-            sendPacketToPlayers(removePacket); // remove
-
-            serverOwnedInstances.Remove(instance);
-        }
-
         public void setActorZone(WFActor instance, string zoneName, int zoneOwner)
         {
             Dictionary<string, object> removePacket = new();
@@ -234,7 +235,7 @@ namespace WFServer
             Console.Title = $"Cove Dedicated Server, {gameLobby.MemberCount - 1} players!";
         }
 
-        public void disconnectPlayers()
+        public void disconnectAllPlayers()
         {
             Dictionary<string, object> closePacket = new();
             closePacket["type"] = "server_close";
@@ -252,7 +253,7 @@ namespace WFServer
 
         public Dictionary<string, object> createRequestActorResponce()
         {
-            Dictionary <string, object> createPacket = new();
+            Dictionary<string, object> createPacket = new();
 
             createPacket["type"] = "actor_request_send";
 
@@ -268,6 +269,5 @@ namespace WFServer
             PluginInstance pluginInfo = loadedPlugins.Find(i => i.plugin == caller);
             Console.WriteLine($"[{pluginInfo.pluginName}] {message}");
         }
-
     }
 }

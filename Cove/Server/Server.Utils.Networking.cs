@@ -1,18 +1,13 @@
 ﻿using Steamworks;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.Metrics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Cove.GodotFormat;
 
-namespace WFServer
+namespace Cove.Server
 {
-    partial class Server
+    partial class CoveServer
     {
         Dictionary<string, object> readPacket(byte[] packetBytes)
         {
-            return (new GodotPacketDeserializer(packetBytes)).readPacket();
+            return (new GodotReader(packetBytes)).readPacket();
         }
 
         byte[] writePacket(Dictionary<string, object> packet)

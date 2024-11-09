@@ -1,8 +1,9 @@
 ﻿using System.Text.RegularExpressions;
+using Cove.GodotFormat;
 
-namespace WFServer
+namespace Cove.Server.Utils
 {
-    internal class ReadWorldFile
+    internal class WorldFile
     {
 
         // for reading the point positions from a .tscn file (main_zone.tscn)
