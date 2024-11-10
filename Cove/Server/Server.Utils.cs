@@ -149,7 +149,7 @@ namespace Cove.Server
         {
 
             // dosent work atm
-            return -1;
+            // return -1;
 
             // Crashes the game lmao
             Dictionary<string, object> letterPacket = new();
@@ -157,7 +157,7 @@ namespace Cove.Server
             letterPacket["to"] = (string)to.Value.ToString();
             Dictionary<string, object> data = new Dictionary<string, object>();
             data["to"] = (string)to.Value.ToString();
-            data["from"] = (double)from;
+            data["from"] = (string)from.Value.ToString();
             data["header"] = header;
             data["body"] = body;
             data["closing"] = closing;

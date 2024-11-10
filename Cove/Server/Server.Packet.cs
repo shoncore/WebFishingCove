@@ -37,14 +37,16 @@ namespace Cove.Server
 
                 sendPacketToPlayers(hostPacket);
 
-                /*
+                Console.WriteLine(AllPlayers.Find(p => p.SteamId == packet.SteamId).FisherName);
+
+
                 string LetterBody = "Cove is still in a very early state and there will be bugs!\n" +
                     "The server may crash, but im trying my best to make it stable!\n" +
                     "if you encounter a bug or issue please make an issue on the github page so i can fix it!\n" +
                     "Github > https://xr0.xyz/cove";
 
                 SendLetter(packet.SteamId, SteamClient.SteamId, "About Cove (The server)", LetterBody, "Happy fishing! - ", "Fries");
-                */
+                
 
                 if (isPlayerAdmin(packet.SteamId))
                 {
