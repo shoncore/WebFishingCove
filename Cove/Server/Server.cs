@@ -41,12 +41,12 @@ namespace Cove.Server
             networkThread = new(RunNetwork);
 
             Console.WriteLine("Loading world!");
-            string worldFile = $"{AppDomain.CurrentDomain.BaseDirectory}worlds/main_zone.tscn";
+            string worldFile = $"{AppDomain.CurrentDomain.BaseDirectory}worlds/main_map.tscn";
             if (!File.Exists(worldFile))
             {
 
                 Console.WriteLine("-- ERROR --");
-                Console.WriteLine("main_zone.tscn is missing!");
+                Console.WriteLine("main_map.tscn is missing!");
                 Console.WriteLine("please put a world file in the /worlds folder so the server may load it!");
                 Console.WriteLine("-- ERROR --");
                 Console.WriteLine("Press any key to exit");
