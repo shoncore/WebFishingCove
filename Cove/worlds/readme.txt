@@ -1,2 +1,2 @@
 Put your world files here:
-main_map.tscn
+main_zone.tscn
