@@ -24,13 +24,9 @@ namespace Cove.Server.Actor
             this.Type = Type;
             pos = entPos;
             if (entRot != null)
-            {
                 rot = entRot;
-            }
             else
-            {
                 rot = Vector3.zero;
-            }
         }
 
         public virtual void onUpdate()

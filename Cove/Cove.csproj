@@ -33,5 +33,9 @@
     
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Server\TimedServices\" />
+  </ItemGroup>
+
 
 </Project>

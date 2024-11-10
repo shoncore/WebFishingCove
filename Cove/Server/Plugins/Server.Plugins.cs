@@ -19,11 +19,10 @@ namespace Cove.Server
             Console.WriteLine("YOU HAVE ENABLED PLUGINS, PLUGINS RUN CODE THAT IS NOT APPROVED OR MADE BY COVE");
             Console.WriteLine("ANY AND ALL DAMMAGE TO YOUR COMPUTER IS YOU AND YOUR FAULT ALONE");
             Console.WriteLine("DO NOT RUN ANY UNTRUSTED PLUGINS!");
-            Console.WriteLine("");
             Console.WriteLine("IF YOU ARE RUNNING UNTUSTED PLUGINS EXIT COVE NOW");
             Console.WriteLine("------------ WARNING ------------\n");
 
-            Thread.Sleep(5000);
+            Thread.Sleep(1000);
 
             Console.WriteLine("Loading Plugins...");
 

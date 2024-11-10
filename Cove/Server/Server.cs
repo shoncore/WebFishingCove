@@ -17,6 +17,7 @@ namespace Cove.Server
         public bool ageRestricted = false;
         public bool hideJoinMessage = false;
 
+        float rainMultiplyer = 1f;
         float rainChance = 0f;
 
         List<string> Admins = new();
@@ -24,7 +25,7 @@ namespace Cove.Server
         public List<WFPlayer> AllPlayers = new();
 
         public List<WFActor> serverOwnedInstances = new();
-        public Steamworks.Data.Lobby gameLobby = new Steamworks.Data.Lobby();
+        public Lobby gameLobby = new Lobby();
 
         Thread cbThread;
         Thread networkThread;
@@ -82,6 +83,10 @@ namespace Cove.Server
 
                     case "code":
                         LobbyCode = config[key].ToUpper();
+                        break;
+
+                    case "rainSpawnMultiplyer":
+                        rainMultiplyer = float.Parse(config[key]);
                         break;
 
                     case "codeOnly":
@@ -426,7 +431,7 @@ namespace Cove.Server
             else
             {
                 if (ran.NextSingle() < .75f)
-                    rainChance += .001f;
+                    rainChance += .001f * rainMultiplyer;
             }
 
             if (ran.NextSingle() < 0.01 && ran.NextSingle() < 0.25)

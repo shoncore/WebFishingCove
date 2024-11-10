@@ -24,6 +24,7 @@ Because of this emulation to run the server you must run it from a steam account
 - [X] Improve error handling
 - [X] Some sort of plugin or modding support (C# API)
 - [ ] Add proper support for actor handling (80%)
+- [ ] Make hostspawn and metalspawn IHostedService's
 - [ ] Write a plugin guide / how to create plugins
 
 # How to run:
