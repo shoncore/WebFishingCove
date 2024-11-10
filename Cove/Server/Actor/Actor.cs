@@ -15,6 +15,9 @@ namespace Cove.Server.Actor
         public string zone = "main_zone";
         public int zoneOwner = -1;
 
+        public int despawnTime = -1;
+        public bool despawn = true;
+
         public WFActor(int ID, string Type, Vector3 entPos, Vector3 entRot = null)
         {
             InstanceID = ID;

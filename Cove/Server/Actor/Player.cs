@@ -22,6 +22,7 @@ namespace Cove.Server.Actor
             FisherName = fisherName;
 
             pos = new Vector3(0, 0, 0);
+            despawn = false; // players down despawn!
         }
     };
 }

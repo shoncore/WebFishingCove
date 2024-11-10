@@ -2,6 +2,7 @@
 using Steamworks.Data;
 using Cove.GodotFormat;
 using Cove.Server.Actor;
+using Cove.Server.Utils;
 
 namespace Cove.Server
 {
@@ -24,9 +25,11 @@ namespace Cove.Server
             // tell the client who actualy owns the session!
             if ((string)packetInfo["type"] == "new_player_join")
             {
-
-                messagePlayer("This is a Cove dedicated server!", packet.SteamId);
-                messagePlayer("Please report any issues to the github (xr0.xyz/cove)", packet.SteamId);
+                if (!hideJoinMessage)
+                {
+                    messagePlayer("This is a Cove dedicated server!", packet.SteamId);
+                    messagePlayer("Please report any issues to the github (xr0.xyz/cove)", packet.SteamId);
+                }
 
                 Dictionary<string, object> hostPacket = new();
                 hostPacket["type"] = "recieve_host";
@@ -34,12 +37,14 @@ namespace Cove.Server
 
                 sendPacketToPlayers(hostPacket);
 
+                /*
                 string LetterBody = "Cove is still in a very early state and there will be bugs!\n" +
                     "The server may crash, but im trying my best to make it stable!\n" +
                     "if you encounter a bug or issue please make an issue on the github page so i can fix it!\n" +
                     "Github > https://xr0.xyz/cove";
 
                 SendLetter(packet.SteamId, SteamClient.SteamId, "About Cove (The server)", LetterBody, "Happy fishing! - ", "Fries");
+                */
 
                 if (isPlayerAdmin(packet.SteamId))
                 {

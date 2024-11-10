@@ -15,6 +15,7 @@ namespace Cove.Server
         private string LobbyCode = new string(Enumerable.Range(0, 5).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
         public bool codeOnly = true;
         public bool ageRestricted = false;
+        public bool hideJoinMessage = false;
 
         float rainChance = 0f;
 
@@ -130,6 +131,23 @@ namespace Cove.Server
                             else if (config[key].ToLower() == "false")
                             {
                                 arePluginsEnabled = false;
+                            }
+                            else
+                            {
+                                Console.WriteLine($"\"{config[key]}\" is not true or false!");
+                            }
+                        }
+                        break;
+
+                    case "hideJoinMessage":
+                        {
+                            if (config[key].ToLower() == "true")
+                            {
+                                hideJoinMessage = true;
+                            }
+                            else if (config[key].ToLower() == "false")
+                            {
+                                hideJoinMessage = false;
                             }
                             else
                             {
