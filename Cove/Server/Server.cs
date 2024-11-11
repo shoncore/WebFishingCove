@@ -350,10 +350,7 @@ namespace Cove.Server
 
             foreach (WFActor actor in serverOwnedInstances)
             {
-                if (actor is RainCloud)
-                {
-                    actor.onUpdate();
-                }
+                actor.onUpdate();
 
                 if (!pastTransforms.ContainsKey(actor.InstanceID))
                 {
@@ -388,7 +385,6 @@ namespace Cove.Server
         // port of the _host_spawn_object(): in the world.gd script from the game!
         int hostSpawn()
         {
-
             // remove old instances!
             foreach (WFActor inst in serverOwnedInstances)
             {
@@ -397,7 +393,7 @@ namespace Cove.Server
                 {
                     removeServerActor(inst);
                 }
-                if (inst.Type == "fish" && instanceAge > 80)
+                if (inst.Type == "fish_spawn" && instanceAge > 80)
                 {
                     removeServerActor(inst);
                 }
@@ -449,7 +445,8 @@ namespace Cove.Server
                     // dont spawn too many because it WILL LAG players!
                     if (serverOwnedInstances.Count > 15)
                         return 0;
-                    spawnFish();
+                    WFActor a = spawnFish();
+                    runActorReady(a);
                     break;
 
                 case "meteor":

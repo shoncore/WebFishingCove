@@ -55,26 +55,31 @@ namespace Cove.Server
             serverOwnedInstances.Add(new RainCloud(IId, pos));
         }
 
-        public void spawnFish(string fishType = "fish_spawn")
+        public WFActor spawnFish(string fishType = "fish_spawn")
         {
-            Vector3 pos = fish_points[(new Random()).Next(fish_points.Count)];
-            spawnGenericActor(fishType, pos);
+            Vector3 pos = fish_points[(new Random()).Next(fish_points.Count)] + new Vector3(0,.08f,0);
+            return spawnGenericActor(fishType, pos);
         }
 
-        public void spawnVoidPortal()
+        public WFActor spawnVoidPortal()
         {
             Vector3 pos = hidden_spot[(new Random()).Next(hidden_spot.Count)];
-            spawnGenericActor("void_portal", pos);
+            return spawnGenericActor("void_portal", pos);
         }
 
-        public void spawnMetal()
+        public WFActor spawnMetal()
         {
             Vector3 pos = trash_points[(new Random()).Next(trash_points.Count)];
             if (new Random().NextSingle() < .15f)
             {
                 pos = shoreline_points[(new Random()).Next(shoreline_points.Count)];
             }
-            spawnGenericActor("metal_spawn", pos);
+            return spawnGenericActor("metal_spawn", pos);
+        }
+
+        private WFActor findActorByID(long ID)
+        {
+            return serverOwnedInstances.Find(a => a.InstanceID == ID);
         }
 
         public WFActor spawnGenericActor(string type, Vector3 pos = null)
@@ -83,7 +88,12 @@ namespace Cove.Server
 
             spawnPacket["type"] = "instance_actor";
 
-            int IId = new Random().Next();
+            long IId = new Random().NextInt64();
+            while (findActorByID(IId) != null)
+            {
+                Console.WriteLine("Actor ID Collided!");
+                IId = new Random().NextInt64();
+            }
 
             Dictionary<string, object> instanceSpacePrams = new Dictionary<string, object>();
             spawnPacket["params"] = instanceSpacePrams;
@@ -216,6 +226,19 @@ namespace Cove.Server
 
             prams[0] = zoneName;
             prams[1] = zoneOwner;
+
+            sendPacketToPlayers(removePacket); // remove
+        }
+
+        public void runActorReady(WFActor instance)
+        {
+            Dictionary<string, object> removePacket = new();
+            removePacket["type"] = "actor_action";
+            removePacket["actor_id"] = instance.InstanceID;
+            removePacket["action"] = "_ready";
+
+            Dictionary<int, object> prams = new Dictionary<int, object>();
+            removePacket["params"] = prams;
 
             sendPacketToPlayers(removePacket); // remove
         }

@@ -18,7 +18,7 @@ namespace Cove.Server.Actor
         public int despawnTime = -1;
         public bool despawn = true;
 
-        public WFActor(int ID, string Type, Vector3 entPos, Vector3 entRot = null)
+        public WFActor(long ID, string Type, Vector3 entPos, Vector3 entRot = null)
         {
             InstanceID = ID;
             this.Type = Type;
