@@ -42,13 +42,42 @@ public class ChatCommands : CovePlugin
 
                 case "!users":
                     if (!isPlayerAdmin(sender)) return;
-                    string messageBody = "";
-                    foreach (var player in getAllPlayers())
+
+                    // Get the command arguments
+                    string[] commandParts = message.Split(' ');
+
+                    int pageNumber = 1;
+                    int pageSize = 10;
+
+                    // Check if a page number was provided
+                    if (commandParts.Length > 1)
                     {
-                        messageBody += $"{player.FisherName} [{player.SteamId}]: {player.FisherID}\n";
+                        if (!int.TryParse(commandParts[1], out pageNumber) || pageNumber < 1)
+                        {
+                            pageNumber = 1; // Default to page 1 if parsing fails or page number is less than 1
+                        }
                     }
 
-                    //SendLetter(id, SteamClient.SteamId, "Players in the server", messageBody, "Always here - ", "Cove");
+                    var allPlayers = getAllPlayers();
+                    int totalPlayers = allPlayers.Count();
+                    int totalPages = (int)Math.Ceiling((double)totalPlayers / pageSize);
+
+                    // Ensure the page number is within the valid range
+                    if (pageNumber > totalPages) pageNumber = totalPages;
+
+                    // Get the players for the current page
+                    var playersOnPage = allPlayers.Skip((pageNumber - 1) * pageSize).Take(pageSize);
+
+                    // Build the message to send
+                    string messageBody = "";
+                    foreach (var player in playersOnPage)
+                    {
+                        messageBody += $"\n{player.FisherName}: {player.FisherID}";
+                    }
+
+                    messageBody += $"\nPage {pageNumber} of {totalPages}";
+
+                    sendPlayerChatMessage(sender, "Players in the server:" + messageBody + "\nAlways here - Cove");
                     break;
 
                 case "!spawn":
