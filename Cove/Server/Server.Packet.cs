@@ -44,6 +44,11 @@ namespace Cove.Server
                     messagePlayer("You're an admin on this server!", packet.SteamId);
                 }
 
+                if (isPlayerBanned(packet.SteamId))
+                {
+                    banPlayer(packet.SteamId);
+                }
+
                 //spawnServerPlayerActor(packet.SteamId);
             }
 

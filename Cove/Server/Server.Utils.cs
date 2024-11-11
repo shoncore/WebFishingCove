@@ -266,14 +266,6 @@ namespace Cove.Server
             sendPacketToPlayers(closePacket);
         }
 
-        public void kickPlayer(SteamId id)
-        {
-            Dictionary<string, object> kickPacket = new();
-            kickPacket["type"] = "kick";
-
-            sendPacketToPlayer(kickPacket, id);
-        }
-
         public Dictionary<string, object> createRequestActorResponce()
         {
             Dictionary<string, object> createPacket = new();
