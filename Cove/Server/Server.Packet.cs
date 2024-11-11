@@ -44,10 +44,10 @@ namespace Cove.Server
                     messagePlayer("You're an admin on this server!", packet.SteamId);
                 }
 
+                /*
                 if (isPlayerBanned(packet.SteamId))
-                {
                     banPlayer(packet.SteamId);
-                }
+                */
 
                 //spawnServerPlayerActor(packet.SteamId);
             }
@@ -75,6 +75,10 @@ namespace Cove.Server
                     Vector3 position = (Vector3)packetInfo["pos"];
                     thisPlayer.pos = position;
                 }
+
+                // just in case!
+                if (isPlayerBanned(packet.SteamId))
+                    banPlayer(packet.SteamId);
             }
 
             if ((string)packetInfo["type"] == "request_ping")

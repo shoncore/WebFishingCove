@@ -57,6 +57,13 @@ namespace Cove.Server
                 return;
             }
 
+            string banFile = $"{AppDomain.CurrentDomain.BaseDirectory}bans.txt";
+            if (!File.Exists(banFile))
+            {
+                FileStream f = File.Create(banFile);
+                f.Close(); // close the file
+            }
+
             // get all the spawn points for fish!
             string mapFile = File.ReadAllText(worldFile);
             fish_points = WorldFile.readPoints("fish_spawn", mapFile);

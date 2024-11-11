@@ -24,10 +24,6 @@ namespace Cove.Server
         public bool isPlayerBanned(SteamId id)
         {
             string fileDir = $"{AppDomain.CurrentDomain.BaseDirectory}bans.txt";
-            if (!File.Exists(fileDir))
-            {
-                File.Create(fileDir);
-            }
 
             string[] fileContent = File.ReadAllLines(fileDir);
             foreach (string line in fileContent)
@@ -44,11 +40,6 @@ namespace Cove.Server
         private void writeToBansFile(SteamId id)
         {
             string fileDir = $"{AppDomain.CurrentDomain.BaseDirectory}bans.txt";
-            if (!File.Exists(fileDir))
-            {
-                File.Create(fileDir);
-            }
-
             File.WriteAllText(fileDir, $"\n{id.Value}");
         }
 
