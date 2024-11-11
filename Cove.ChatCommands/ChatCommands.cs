@@ -117,26 +117,23 @@ public class ChatCommands : CovePlugin
                     
                 case "!ban":
                     if (!isPlayerAdmin(sender)) return;
-
-                    // hacky ban func until steamcmd is enabled and can be used to disconnect (im going to kms)
+                    // hacky fix,
                     // Extract player name from the command message
                     string playerNameToBan = message.Split(" ")[1];
-                    WFPlayer playerToBan = getAllPlayers().ToList().Find(p => p.FisherName.Equals(playerNameToBan, StringComparison.OrdinalIgnoreCase));
-                    
+                    WFPlayer playerToBan = getAllPlayers().ToList().Find(p => p.FisherName.Equals(playerNameToBan, System.StringComparison.OrdinalIgnoreCase));
+
                     if (playerToBan == null)
                     {
                         sendPlayerChatMessage(sender, "Player not found!");
                     }
                     else
                     {
-                        // Optionally, you can save the banned player to a list or file for future reference
                         BanPlayer(playerToBan);
-
                         sendPlayerChatMessage(sender, $"Banned {playerToBan.FisherName}");
                         sendGlobalChatMessage($"{playerToBan.FisherName} has been banned from the server.");
                     }
                     break;
-
+                    
                 case "!setjoinable":
                     {
                         if (!isPlayerAdmin(sender)) return;
