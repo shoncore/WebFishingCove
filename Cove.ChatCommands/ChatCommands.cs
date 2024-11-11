@@ -143,7 +143,26 @@ public class ChatCommands : CovePlugin
                         sendGlobalChatMessage($"{kickedplayer.FisherName} was kicked from the lobby!");
                     }
                     break;
+                    
+                case "!ban":
+                    if (!isPlayerAdmin(sender)) return;
+                    // hacky fix,
+                    // Extract player name from the command message
+                    string playerNameToBan = message.Split(" ")[1];
+                    WFPlayer playerToBan = getAllPlayers().ToList().Find(p => p.FisherName.Equals(playerNameToBan, System.StringComparison.OrdinalIgnoreCase));
 
+                    if (playerToBan == null)
+                    {
+                        sendPlayerChatMessage(sender, "Player not found!");
+                    }
+                    else
+                    {
+                        banPlayer(playerToBan);
+                        sendPlayerChatMessage(sender, $"Banned {playerToBan.FisherName}");
+                        sendGlobalChatMessage($"{playerToBan.FisherName} has been banned from the server.");
+                    }
+                    break;
+                    
                 case "!setjoinable":
                     {
                         if (!isPlayerAdmin(sender)) return;
