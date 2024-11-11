@@ -128,7 +128,7 @@ public class ChatCommands : CovePlugin
                     }
                     else
                     {
-                        BanPlayer(playerToBan);
+                        banPlayer(playerToBan);
                         sendPlayerChatMessage(sender, $"Banned {playerToBan.FisherName}");
                         sendGlobalChatMessage($"{playerToBan.FisherName} has been banned from the server.");
                     }
