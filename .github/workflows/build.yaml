@@ -107,7 +107,7 @@ jobs:
 
       # Step 4: Publish the project as a single file for Windows 64-bit
       - name: Publish the application (Windows)
-        run: dotnet publish -c Release -r win-x64 -o ./publish
+        run: dotnet build -c Release -r win-x64 -o ./publish
 
       # Step 6: Upload the Windows build as an artifact to be used in release
       - name: Upload Windows Build Artifact
