@@ -9,7 +9,7 @@ namespace Cove.Server
 {
     public partial class CoveServer
     {
-        private string WebFishingGameVersion = "1.09";
+        private string WebFishingGameVersion = "1.1";
         public int MaxPlayers = 50;
         public string ServerName = "A Cove Dedicated Server";
         private string LobbyCode = new string(Enumerable.Range(0, 5).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
