@@ -20,8 +20,7 @@ namespace Cove.Server
                 else if (kvp.Value is Dictionary<int, object>)
                 {
                     printArray((Dictionary<int, object>)kvp.Value, sub + "." + kvp.Key);
-                }
-                {
+                } else {
                     Console.WriteLine($"{sub} {kvp.Key}: {kvp.Value}");
                 }
             }
@@ -37,8 +36,7 @@ namespace Cove.Server
                 else if (kvp.Value is Dictionary<int, object>)
                 {
                     printArray((Dictionary<int, object>)kvp.Value, sub + "." + kvp.Key);
-                }
-                {
+                } else {
                     Console.WriteLine($"{sub} {kvp.Key}: {kvp.Value}");
                 }
             }
