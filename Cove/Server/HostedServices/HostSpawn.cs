@@ -82,7 +82,8 @@ namespace Cove.Server.HostedServices
 
             if (ran.NextSingle() < 0.01 && ran.NextSingle() < 0.25)
             {
-                type = "void_portal";
+                if (server.shouldSpawnPortal)
+                    type = "void_portal";
             }
 
             switch (type)

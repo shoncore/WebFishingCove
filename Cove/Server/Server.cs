@@ -21,8 +21,9 @@ namespace Cove.Server
         public bool hideJoinMessage = false;
 
         public float rainMultiplyer = 1f;
-        public bool shouldSpawnMeteor = false;
-        public bool shouldSpawnMetal = false;
+        public bool shouldSpawnMeteor = true;
+        public bool shouldSpawnMetal = true;
+        public bool shouldSpawnPortal = true;
 
         List<string> Admins = new();
 
@@ -128,6 +129,10 @@ namespace Cove.Server
 
                     case "spawnMetal":
                         shouldSpawnMetal = getBoolFromString(config[key]);
+                        break;
+
+                    case "spawnPortal":
+                        shouldSpawnPortal = getBoolFromString(config[key]);
                         break;
 
                     default:
