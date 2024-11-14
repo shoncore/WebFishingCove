@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Cove.Server.Actor;
 using Steamworks;
 
 namespace Cove.Server
@@ -40,7 +41,8 @@ namespace Cove.Server
         private void writeToBansFile(SteamId id)
         {
             string fileDir = $"{AppDomain.CurrentDomain.BaseDirectory}bans.txt";
-            File.WriteAllText(fileDir, $"\n{id.Value}");
+            WFPlayer player = AllPlayers.Find(p => p.SteamId == id);
+            File.WriteAllText(fileDir, $"\n{id.Value} #{player.FisherName}");
         }
 
         public void kickPlayer(SteamId id)

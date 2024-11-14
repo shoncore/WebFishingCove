@@ -4,9 +4,7 @@ using Cove.Server.Plugins;
 
 public class ChatCommands : CovePlugin
 {
-
     CoveServer Server { get; set; } // lol
-
     public ChatCommands(CoveServer server) : base(server)
     {
         Server = server;
@@ -20,7 +18,6 @@ public class ChatCommands : CovePlugin
     public override void onPlayerJoin(WFPlayer player)
     {
         base.onPlayerJoin(player);
-        //sendPlayerChatMessage(player, "use !help for a list of commands!");
     }
 
     public override void onChatMessage(WFPlayer sender, string message)
@@ -36,7 +33,13 @@ public class ChatCommands : CovePlugin
                 case "!help":
                     {
                         sendPlayerChatMessage(sender, "--- HELP ---");
-                        sendPlayerChatMessage(sender, "Not much here tbh...");
+                        sendPlayerChatMessage(sender, "!help - Shows this message");
+                        sendPlayerChatMessage(sender, "!users - Shows all players in the server");
+                        sendPlayerChatMessage(sender, "!spawn <actor> - Spawns an actor");
+                        sendPlayerChatMessage(sender, "!kick <player> - Kicks a player");
+                        sendPlayerChatMessage(sender, "!ban <player> - Bans a player");
+                        sendPlayerChatMessage(sender, "!setjoinable <true/false> - Opens or closes the lobby");
+                        sendPlayerChatMessage(sender, "!refreshadmins - Refreshes the admins list");
                     }
                     break;
 
@@ -125,41 +128,45 @@ public class ChatCommands : CovePlugin
                     break;
 
                 case "!kick":
-                    if (!isPlayerAdmin(sender)) return;
-                    var kickUser = message.Split(" ")[1].ToUpper();
-                    WFPlayer kickedplayer = getAllPlayers().ToList().Find(p => p.FisherID == kickUser);
-                    if (kickedplayer == null)
                     {
-                        sendPlayerChatMessage(sender, "That's not a player!");
-                    }
-                    else
-                    {
-                        Dictionary<string, object> packet = new Dictionary<string, object>();
-                        packet["type"] = "kick";
+                        if (!isPlayerAdmin(sender)) return;
+                        string playerName = message.Substring(command.Length + 1);
+                        WFPlayer kickedplayer = getAllPlayers().ToList().Find(p => p.FisherName.Equals(playerName, StringComparison.OrdinalIgnoreCase));
+                        if (kickedplayer == null)
+                        {
+                            sendPlayerChatMessage(sender, "That's not a player!");
+                        }
+                        else
+                        {
+                            Dictionary<string, object> packet = new Dictionary<string, object>();
+                            packet["type"] = "kick";
 
-                        sendPacketToPlayer(packet, kickedplayer);
+                            sendPacketToPlayer(packet, kickedplayer);
 
-                        sendPlayerChatMessage(sender, $"Kicked {kickedplayer.FisherName}");
-                        sendGlobalChatMessage($"{kickedplayer.FisherName} was kicked from the lobby!");
+                            sendPlayerChatMessage(sender, $"Kicked {kickedplayer.FisherName}");
+                            sendGlobalChatMessage($"{kickedplayer.FisherName} was kicked from the lobby!");
+                        }
                     }
                     break;
                     
                 case "!ban":
-                    if (!isPlayerAdmin(sender)) return;
-                    // hacky fix,
-                    // Extract player name from the command message
-                    string playerNameToBan = message.Split(" ")[1];
-                    WFPlayer playerToBan = getAllPlayers().ToList().Find(p => p.FisherName.Equals(playerNameToBan, System.StringComparison.OrdinalIgnoreCase));
+                    {
+                        if (!isPlayerAdmin(sender)) return;
+                        // hacky fix,
+                        // Extract player name from the command message
+                        string playerName = message.Substring(command.Length + 1);
+                        WFPlayer playerToBan = getAllPlayers().ToList().Find(p => p.FisherName.Equals(playerName, StringComparison.OrdinalIgnoreCase));
 
-                    if (playerToBan == null)
-                    {
-                        sendPlayerChatMessage(sender, "Player not found!");
-                    }
-                    else
-                    {
-                        banPlayer(playerToBan);
-                        sendPlayerChatMessage(sender, $"Banned {playerToBan.FisherName}");
-                        sendGlobalChatMessage($"{playerToBan.FisherName} has been banned from the server.");
+                        if (playerToBan == null)
+                        {
+                            sendPlayerChatMessage(sender, "Player not found!");
+                        }
+                        else
+                        {
+                            banPlayer(playerToBan);
+                            sendPlayerChatMessage(sender, $"Banned {playerToBan.FisherName}");
+                            sendGlobalChatMessage($"{playerToBan.FisherName} has been banned from the server.");
+                        }
                     }
                     break;
                     
