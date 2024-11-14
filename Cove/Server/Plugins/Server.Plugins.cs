@@ -33,11 +33,9 @@ namespace Cove.Server
             // get all files in the plugins folder
             foreach (string fileName in Directory.GetFiles(pluginsFolder))
             {
-                bool isAssembly = false;
                 try
                 {
                     AssemblyName thisFile = AssemblyName.GetAssemblyName(fileName); ;
-                    isAssembly = true;
                     pluginAssemblys.Add(Assembly.LoadFrom(fileName));
                 }
                 catch (BadImageFormatException)
