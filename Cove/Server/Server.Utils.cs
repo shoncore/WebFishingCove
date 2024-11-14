@@ -58,13 +58,19 @@ namespace Cove.Server
         public WFActor spawnFish(string fishType = "fish_spawn")
         {
             Vector3 pos = fish_points[(new Random()).Next(fish_points.Count)] + new Vector3(0,.08f,0);
-            return spawnGenericActor(fishType, pos);
+            WFActor actor = spawnGenericActor(fishType, pos);
+            actor.despawn = false;
+            actor.despawnTime = fishType == "fish_spawn" ? 80 : 120; // 80 for normal fish, 120 for alien fish
+            return actor;
         }
 
         public WFActor spawnVoidPortal()
         {
             Vector3 pos = hidden_spot[(new Random()).Next(hidden_spot.Count)];
-            return spawnGenericActor("void_portal", pos);
+            WFActor actor = spawnGenericActor("void_portal", pos);
+            actor.despawn = true;
+            actor.despawnTime = 600;
+            return actor;
         }
 
         public WFActor spawnMetal()
@@ -74,7 +80,9 @@ namespace Cove.Server
             {
                 pos = shoreline_points[(new Random()).Next(shoreline_points.Count)];
             }
-            return spawnGenericActor("metal_spawn", pos);
+            WFActor actor = spawnGenericActor("metal_spawn", pos);
+            actor.despawn = false; // metal never despawns!
+            return actor;
         }
 
         private WFActor findActorByID(long ID)

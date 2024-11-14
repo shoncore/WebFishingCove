@@ -4,21 +4,25 @@ using Cove.Server.Plugins;
 using Cove.GodotFormat;
 using Cove.Server.Actor;
 using Cove.Server.Utils;
+using Microsoft.Extensions.Hosting;
+using Cove.Server.HostedServices;
+using Microsoft.Extensions.Logging;
 
 namespace Cove.Server
 {
     public partial class CoveServer
     {
         private string WebFishingGameVersion = "1.1";
-        public int MaxPlayers = 50;
+        public int MaxPlayers = 20;
         public string ServerName = "A Cove Dedicated Server";
         private string LobbyCode = new string(Enumerable.Range(0, 5).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
         public bool codeOnly = true;
         public bool ageRestricted = false;
         public bool hideJoinMessage = false;
 
-        float rainMultiplyer = 1f;
-        float rainChance = 0f;
+        public float rainMultiplyer = 1f;
+        public bool shouldSpawnMeteor = false;
+        public bool shouldSpawnMetal = false;
 
         List<string> Admins = new();
 
@@ -34,6 +38,8 @@ namespace Cove.Server
         List<Vector3> trash_points;
         List<Vector3> shoreline_points;
         List<Vector3> hidden_spot;
+
+        Dictionary<string, IHostedService> services = new();
 
         public void Init()
         {
@@ -97,20 +103,7 @@ namespace Cove.Server
                         break;
 
                     case "codeOnly":
-                        {
-                            if (config[key].ToLower() == "true")
-                            {
-                                codeOnly = true;
-                            }
-                            else if (config[key].ToLower() == "false")
-                            {
-                                codeOnly = false;
-                            }
-                            else
-                            {
-                                Console.WriteLine($"\"{config[key]}\" is not true or false!");
-                            }
-                        }
+                        codeOnly = getBoolFromString(config[key]);
                         break;
 
                     case "gameVersion":
@@ -118,54 +111,23 @@ namespace Cove.Server
                         break;
 
                     case "ageRestricted":
-                        {
-                            if (config[key].ToLower() == "true")
-                            {
-                                ageRestricted = true;
-                            }
-                            else if (config[key].ToLower() == "false")
-                            {
-                                ageRestricted = false;
-                            }
-                            else
-                            {
-                                Console.WriteLine($"\"{config[key]}\" is not true or false!");
-                            }
-                        }
+                        ageRestricted = getBoolFromString(config[key]);
                         break;
 
                     case "pluginsEnabled":
-                        {
-                            if (config[key].ToLower() == "true")
-                            {
-                                arePluginsEnabled = true;
-                            }
-                            else if (config[key].ToLower() == "false")
-                            {
-                                arePluginsEnabled = false;
-                            }
-                            else
-                            {
-                                Console.WriteLine($"\"{config[key]}\" is not true or false!");
-                            }
-                        }
+                        arePluginsEnabled = getBoolFromString(config[key]);
                         break;
 
                     case "hideJoinMessage":
-                        {
-                            if (config[key].ToLower() == "true")
-                            {
-                                hideJoinMessage = true;
-                            }
-                            else if (config[key].ToLower() == "false")
-                            {
-                                hideJoinMessage = false;
-                            }
-                            else
-                            {
-                                Console.WriteLine($"\"{config[key]}\" is not true or false!");
-                            }
-                        }
+                        hideJoinMessage = getBoolFromString(config[key]);
+                        break;
+
+                    case "spawnMeteor":
+                        shouldSpawnMeteor = getBoolFromString(config[key]);
+                        break;
+
+                    case "spawnMetal":
+                        shouldSpawnMetal = getBoolFromString(config[key]);
                         break;
 
                     default:
@@ -203,22 +165,41 @@ namespace Cove.Server
                 return;
             }
 
+            // thread for running steamworks callbacks
             cbThread.IsBackground = true;
             cbThread.Start();
 
+            // thread for getting network packets from steam
+            // i wish this could be a service, but when i tried it the packets got buffered and it was a mess
+            // like 10 minutes of delay within 30 seconds
             networkThread.IsBackground = true;
             networkThread.Start();
+            
+            bool LogServices = false;
+            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+            {
+                if (LogServices)
+                    builder.AddConsole();
+            });
 
-            // start network updates
-            Repeat clientUpdateRate = new Repeat(actorUpdate, 1000 / 12); // 8 updates per second should be more than enough!
-            clientUpdateRate.Start();
+            // Create a logger for each service that we need to run.
+            Logger<ActorUpdateService> actorServiceLogger = new Logger<ActorUpdateService>(loggerFactory);
+            Logger<HostSpawnService> hostSpawnServiceLogger = new Logger<HostSpawnService>(loggerFactory);
+            Logger<HostSpawnMetalService> hostSpawnMetalServiceLogger = new Logger<HostSpawnMetalService>(loggerFactory);
 
-            // host spawning objects
-            Repeat hostSpawnTimer = new Repeat(hostSpawn, 10000);
-            hostSpawnTimer.Start();
+            // Create the services that we need to run.
+            IHostedService actorUpdateService = new ActorUpdateService(actorServiceLogger, this);
+            IHostedService hostSpawnService = new HostSpawnService(hostSpawnServiceLogger, this);
+            IHostedService hostSpawnMetalService = new HostSpawnMetalService(hostSpawnMetalServiceLogger, this);
 
-            Repeat hostSpawnMetalTimer = new Repeat(hostSpawnMetal, 10000);
-            hostSpawnMetalTimer.Start();
+            // Start the services.
+            actorUpdateService.StartAsync(CancellationToken.None);
+            hostSpawnService.StartAsync(CancellationToken.None);
+            hostSpawnMetalService.StartAsync(CancellationToken.None);
+
+            services["actor_update"] = actorUpdateService;
+            services["host_spawn"] = hostSpawnService;
+            services["host_spawn_metal"] = hostSpawnMetalService;
 
             SteamMatchmaking.OnLobbyCreated += OnLobbyCreated;
             void OnLobbyCreated(Result result, Steamworks.Data.Lobby Lobby)
@@ -305,6 +286,21 @@ namespace Cove.Server
             // create the server
             SteamMatchmaking.CreateLobbyAsync(maxMembers: MaxPlayers);
         }
+        private bool getBoolFromString(string str)
+        {
+            if (str.ToLower() == "true")
+            {
+                return true;
+            }
+            else if (str.ToLower() == "false")
+            {
+                return false;
+            }
+            else
+            {
+                return false;
+            }
+        }
 
         void runSteamworksUpdate()
         {
@@ -332,7 +328,6 @@ namespace Cove.Server
                             }
                         }
                     }
-
                 }
                 catch (Exception e)
                 {
@@ -340,151 +335,6 @@ namespace Cove.Server
                     Console.WriteLine(e.ToString());
                 }
             }
-        }
-
-        // how many ticks before the server send an update just incase
-        int idelUpdateCount = 30;
-        Dictionary<long, Vector3> pastTransforms = new Dictionary<long, Vector3>();
-        int updateI = 0;
-        int actorUpdate()
-        {
-            updateI++;
-
-            foreach (PluginInstance plugin in loadedPlugins)
-            {
-                plugin.plugin.onUpdate();
-            }
-
-            foreach (WFActor actor in serverOwnedInstances)
-            {
-                actor.onUpdate();
-
-                if (!pastTransforms.ContainsKey(actor.InstanceID))
-                {
-                    pastTransforms[actor.InstanceID] = Vector3.zero;
-                }
-
-                if (actor.pos != pastTransforms[actor.InstanceID] || (updateI == idelUpdateCount))
-                {
-
-                    //Console.WriteLine("Updating Actor");
-
-                    Dictionary<string, object> packet = new Dictionary<string, object>();
-                    packet["type"] = "actor_update";
-                    packet["actor_id"] = actor.InstanceID;
-                    packet["pos"] = actor.pos;
-                    packet["rot"] = actor.rot;
-
-                    pastTransforms[actor.InstanceID] = actor.pos; // crude
-
-                    sendPacketToPlayers(packet);
-                }
-            }
-
-            if (updateI >= idelUpdateCount)
-            {
-                updateI = 0;
-            }
-
-            return 0;
-        }
-
-        // port of the _host_spawn_object(): in the world.gd script from the game!
-        int hostSpawn()
-        {
-            // remove old instances!
-            foreach (WFActor inst in serverOwnedInstances)
-            {
-                float instanceAge = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - inst.SpawnTime.ToUnixTimeSeconds();
-                if (inst.Type == "fish_spawn_alien" && instanceAge > 120)
-                {
-                    removeServerActor(inst);
-                }
-                if (inst.Type == "fish_spawn" && instanceAge > 80)
-                {
-                    removeServerActor(inst);
-                }
-                if (inst.Type == "raincloud" && instanceAge > 550)
-                {
-                    removeServerActor(inst);
-                }
-                if (inst.Type == "void_portal" && instanceAge > 600)
-                {
-                    removeServerActor(inst);
-                }
-                //setActorZone(inst, "main_zone", -1);
-            }
-
-            Random ran = new Random();
-            string[] beginningTypes = new string[2];
-            beginningTypes[0] = "fish";
-            beginningTypes[1] = "none";
-            string type = beginningTypes[ran.Next() % 2];
-
-            if (ran.NextSingle() < 0.01 && ran.NextSingle() < 0.4)
-            {
-                type = "meteor";
-            }
-
-            if (ran.NextSingle() < rainChance && ran.NextSingle() < .12f)
-            {
-                type = "rain";
-                rainChance = 0;
-            }
-            else
-            {
-                if (ran.NextSingle() < .75f)
-                    rainChance += .001f * rainMultiplyer;
-            }
-
-            if (ran.NextSingle() < 0.01 && ran.NextSingle() < 0.25)
-            {
-                type = "void_portal";
-            }
-
-            switch (type)
-            {
-
-                case "none":
-                    break;
-
-                case "fish":
-                    // dont spawn too many because it WILL LAG players!
-                    if (serverOwnedInstances.Count > 15)
-                        return 0;
-                    WFActor a = spawnFish();
-                    runActorReady(a);
-                    break;
-
-                case "meteor":
-                    spawnFish("fish_spawn_alien");
-                    break;
-
-                case "rain":
-                    spawnRainCloud();
-                    break;
-
-                case "void_portal":
-                    spawnVoidPortal();
-                    break;
-
-            }
-
-            return 0;
-        }
-
-        int hostSpawnMetal()
-        {
-            // still got no idea
-            gameLobby.SetData("server_browser_value", "0");
-
-            int metalCount = serverOwnedInstances.FindAll(a => a.Type == "metal_spawn").Count;
-            if (metalCount > 7)
-                return 0;
-
-            spawnMetal();
-
-            return 0;
         }
 
         void OnPlayerChat(string message, SteamId id)
@@ -498,43 +348,5 @@ namespace Cove.Server
                 plugin.plugin.onChatMessage(sender, message);
             }
         }
-
-        // purely for debug
-        void printStringDict(Dictionary<string, object> obj, string sub = "")
-        {
-            foreach (var kvp in obj)
-            {
-                if (kvp.Value is Dictionary<string, object>)
-                {
-                    printStringDict((Dictionary<string, object>)kvp.Value, sub + "." + kvp.Key);
-                }
-                else if (kvp.Value is Dictionary<int, object>)
-                {
-                    printArray((Dictionary<int, object>)kvp.Value, sub + "." + kvp.Key);
-                }
-                {
-                    Console.WriteLine($"{sub} {kvp.Key}: {kvp.Value}");
-                }
-            }
-        }
-
-        void printArray(Dictionary<int, object> obj, string sub = "")
-        {
-            foreach (var kvp in obj)
-            {
-                if (kvp.Value is Dictionary<string, object>)
-                {
-                    printStringDict((Dictionary<string, object>)kvp.Value, sub + "." + kvp.Key);
-                }
-                else if (kvp.Value is Dictionary<int, object>)
-                {
-                    printArray((Dictionary<int, object>)kvp.Value, sub + "." + kvp.Key);
-                }
-                {
-                    Console.WriteLine($"{sub} {kvp.Key}: {kvp.Value}");
-                }
-            }
-        }
-
     }
 }

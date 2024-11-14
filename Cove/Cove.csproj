@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Facepunch.Steamworks" Version="2.3.3" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,10 +32,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Server\TimedServices\" />
   </ItemGroup>
 
 

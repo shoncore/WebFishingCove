@@ -1,6 +1,6 @@
 ﻿namespace Cove.Server.Plugins
 {
-    class PluginInstance
+    public class PluginInstance
     {
         public CovePlugin plugin;
         public string pluginName;
