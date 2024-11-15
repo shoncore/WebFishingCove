@@ -1,10 +1,26 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 
 namespace Cove.Server.HostedServices
 {
+    class RequestBody
+    {
+        public string host { get; set; }
+        public string lobby_code { get; set; }
+        public string version { get; set; }
+        public string lobby_type { get; set; }
+        public int player_cap { get; set; }
+        public bool age_restricted { get; set; }
+        public string map { get; set; }
+        public string title { get; set; }
+        public string[] mods { get; set; }
+        public string country { get; set; }
+        public int current_players { get; set; }
+    }
+
     public class HLSServerListService : IHostedService, IDisposable
     {
         private readonly ILogger<HLSServerListService> _logger;
@@ -37,7 +53,7 @@ namespace Cove.Server.HostedServices
             string endpoint = $"https://hooklinesinker.lol/servers"; // api endpoint for HLS server list
             using (HttpClient client = new HttpClient())
             {
-                var requestBody = new
+                var requestBody = new RequestBody
                 {
                     host = Steamworks.SteamClient.Name,
                     lobby_code = server.LobbyCode,
