@@ -41,7 +41,7 @@ namespace Cove.Server.HostedServices
         // This is the method that will be triggered periodically by the timer.
         private void DoWork(object state)
         {
-            _logger.LogInformation("ActorUpdateService is working.");
+            //_logger.LogInformation("ActorUpdateService is working.");
 
             updateI++;
 

@@ -162,6 +162,22 @@ namespace Cove.Server
             }
         }
 
+        public void sendBlacklistPacketToPlayer(string blacklistedSteamID, SteamId receiving)
+        {
+            Dictionary<string, object> blacklistPacket = new();
+            blacklistPacket["type"] = "force_disconnect_player";
+            blacklistPacket["user_id"] = blacklistedSteamID; // gotta be a string
+            sendPacketToPlayer(blacklistPacket, receiving);
+        }
+
+        public void sendBlacklistPacketToAll(string blacklistedSteamID)
+        {
+            Dictionary<string, object> blacklistPacket = new();
+            blacklistPacket["type"] = "force_disconnect_player";
+            blacklistPacket["user_id"] = blacklistedSteamID; // gotta be a string
+            sendPacketToPlayers(blacklistPacket);
+        }
+
         // returns the letter id!
         int SendLetter(SteamId to, SteamId from, string header, string body, string closing, string user)
         {

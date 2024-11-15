@@ -20,6 +20,8 @@ namespace Cove.Server
 
             if (saveToFile)
                 writeToBansFile(id);
+
+            sendBlacklistPacketToAll(id.Value.ToString());
         }
 
         public bool isPlayerBanned(SteamId id)

@@ -12,12 +12,13 @@ namespace Cove.Server
 {
     public partial class CoveServer
     {
-        private string WebFishingGameVersion = "1.1";
+        public readonly string WebFishingGameVersion = "1.1"; // make sure to update this when the game updates!
         public int MaxPlayers = 20;
         public string ServerName = "A Cove Dedicated Server";
-        private string LobbyCode = new string(Enumerable.Range(0, 5).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
+        public string LobbyCode = new string(Enumerable.Range(0, 5).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
         public bool codeOnly = true;
         public bool ageRestricted = false;
+        
         public bool hideJoinMessage = false;
 
         public float rainMultiplyer = 1f;
@@ -26,11 +27,10 @@ namespace Cove.Server
         public bool shouldSpawnPortal = true;
 
         List<string> Admins = new();
+        public Lobby gameLobby = new Lobby();
 
         public List<WFPlayer> AllPlayers = new();
-
         public List<WFActor> serverOwnedInstances = new();
-        public Lobby gameLobby = new Lobby();
 
         Thread cbThread;
         Thread networkThread;
@@ -108,7 +108,7 @@ namespace Cove.Server
                         break;
 
                     case "gameVersion":
-                        WebFishingGameVersion = config[key];
+                        //WebFishingGameVersion = config[key];
                         break;
 
                     case "ageRestricted":
@@ -191,23 +191,28 @@ namespace Cove.Server
             Logger<ActorUpdateService> actorServiceLogger = new Logger<ActorUpdateService>(loggerFactory);
             Logger<HostSpawnService> hostSpawnServiceLogger = new Logger<HostSpawnService>(loggerFactory);
             Logger<HostSpawnMetalService> hostSpawnMetalServiceLogger = new Logger<HostSpawnMetalService>(loggerFactory);
+            Logger<HLSServerListService> HLSServerListLogger = new Logger<HLSServerListService>(loggerFactory);
 
             // Create the services that we need to run.
             IHostedService actorUpdateService = new ActorUpdateService(actorServiceLogger, this);
             IHostedService hostSpawnService = new HostSpawnService(hostSpawnServiceLogger, this);
             IHostedService hostSpawnMetalService = new HostSpawnMetalService(hostSpawnMetalServiceLogger, this);
+            IHostedService hlsServerList = new HLSServerListService(HLSServerListLogger, this);
 
             // Start the services.
             actorUpdateService.StartAsync(CancellationToken.None);
             hostSpawnService.StartAsync(CancellationToken.None);
             hostSpawnMetalService.StartAsync(CancellationToken.None);
+            hlsServerList.StartAsync(CancellationToken.None);
 
+            // add them to the services dictionary so we can access them later if needed
             services["actor_update"] = actorUpdateService;
             services["host_spawn"] = hostSpawnService;
             services["host_spawn_metal"] = hostSpawnMetalService;
+            services["hls_server_list"] = hlsServerList;
 
             SteamMatchmaking.OnLobbyCreated += OnLobbyCreated;
-            void OnLobbyCreated(Result result, Steamworks.Data.Lobby Lobby)
+            void OnLobbyCreated(Result result, Lobby Lobby)
             {
                 Lobby.SetJoinable(true); // make the server joinable to players!
                 Lobby.SetData("ref", "webfishing_gamelobby");

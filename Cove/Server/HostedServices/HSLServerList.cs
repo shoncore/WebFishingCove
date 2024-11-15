@@ -1,0 +1,91 @@
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using System.Text.Json;
+
+
+namespace Cove.Server.HostedServices
+{
+    public class HLSServerListService : IHostedService, IDisposable
+    {
+        private readonly ILogger<HLSServerListService> _logger;
+        private Timer _timer;
+        private CoveServer server;
+
+        public HLSServerListService(ILogger<HLSServerListService> logger, CoveServer server)
+        {
+            _logger = logger;
+            this.server = server;
+        }
+
+        // This method is called when the service is starting.
+        // the timeout for servers is 3 minutes, so we are going to send a heartbeat every 2.45 minutes
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("HLSServerListService is starting.");
+
+            // Setup a timer to trigger the task periodically.
+            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMinutes(2) + TimeSpan.FromSeconds(45));
+
+            return Task.CompletedTask;
+        }
+
+        // This is the method that will be triggered periodically by the timer.
+        private void DoWork(object state)
+        {
+            _logger.LogInformation("HLSServerListService is working.");
+
+            string endpoint = $"https://hooklinesinker.lol/servers"; // api endpoint for HLS server list
+            using (HttpClient client = new HttpClient())
+            {
+                var requestBody = new
+                {
+                    host = Steamworks.SteamClient.Name,
+                    lobby_code = server.LobbyCode,
+                    version = server.WebFishingGameVersion,
+                    lobby_type = server.codeOnly ? "Code Only" : "Public",
+                    player_cap = server.MaxPlayers,
+                    age_restricted = server.ageRestricted,
+                    map = "default", // make this changeable later (will add map id to server config)
+                    title = server.ServerName,
+                    mods = new string[] { }, // again make this changeable later
+                    country = Steamworks.SteamUtils.IpCountry,
+                    current_players = server.AllPlayers.Count,
+                };
+
+                string jsonBody = JsonSerializer.Serialize(requestBody);
+                HttpContent content = new StringContent(jsonBody, System.Text.Encoding.UTF8, "application/json");
+
+                // send a heartbeat to the HLS server list
+                HttpResponseMessage response = client.PostAsync(endpoint, content).Result;
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Heartbeat sent to HLS server list.");
+                }
+                else
+                {
+                    _logger.LogError("Failed to send heartbeat to HLS server list.");
+                    _logger.LogError(response.Content.ReadAsStringAsync().Result);
+                }
+            }
+
+        }
+
+        // This method is called when the service is stopping.
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("HLSServerListService is stopping.");
+
+            // Stop the timer and dispose of it.
+            _timer?.Change(Timeout.Infinite, 0);
+
+            return Task.CompletedTask;
+        }
+
+        // This method is called to dispose of the resources.
+        public void Dispose()
+        {
+            _timer?.Dispose();
+        }
+    }
+
+}
