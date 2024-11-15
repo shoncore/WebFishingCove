@@ -68,7 +68,12 @@ namespace Cove.Server.HostedServices
                     current_players = server.AllPlayers.Count,
                 };
 
-                string jsonBody = JsonSerializer.Serialize(requestBody);
+                JsonSerializerOptions options = new JsonSerializerOptions
+                {
+                    TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+                };
+
+                string jsonBody = JsonSerializer.Serialize(requestBody, options);
                 HttpContent content = new StringContent(jsonBody, System.Text.Encoding.UTF8, "application/json");
 
                 // send a heartbeat to the HLS server list

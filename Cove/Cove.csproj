@@ -31,8 +31,7 @@
     <Content Include="worlds\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    
-  </ItemGroup>
 
+  </ItemGroup>
 
 </Project>
