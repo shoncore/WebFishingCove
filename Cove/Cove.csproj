@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    <SteamAppId>3146520</SteamAppId>
   </PropertyGroup>
 
   <ItemGroup>

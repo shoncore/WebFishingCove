@@ -312,7 +312,7 @@
     {
       try
       {
-        SteamClient.Init(3146520, false);
+        SteamClient.Init(SteamConfig.AppId, false);
         Logger.LogInformation("Steam Client initialized successfully.");
         return true;
       }
