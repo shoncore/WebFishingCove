@@ -52,10 +52,10 @@
             }
         }
 
-        private static Dictionary<string, object> ParsePacket(P2Packet packet)
+        private Dictionary<string, object> ParsePacket(P2Packet packet)
         {
             var decompressedData = GzipHelper.DecompressGzip(packet.Data);
-            var packetInfo = ReadPacket(decompressedData);
+            var packetInfo = ReadPacket(decompressedData, LoggerFactory.CreateLogger<GodotReader>());
             return packetInfo;
         }
 

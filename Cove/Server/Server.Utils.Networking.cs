@@ -2,9 +2,9 @@
 {
     public partial class CoveServer
     {
-        private static Dictionary<string, object> ReadPacket(byte[] packetBytes)
+        private static Dictionary<string, object> ReadPacket(byte[] packetBytes, ILogger<GodotReader> logger)
         {
-            return new GodotReader(packetBytes).ReadPacket();
+            return new GodotReader(packetBytes, logger).ReadPacket();
         }
 
         private static byte[] WritePacket(Dictionary<string, object> packet)
