@@ -1,114 +1,117 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Cove.GodotFormat;
-using Cove.Server.Actor;
-using Cove.Server.Plugins;
+﻿using Cove.GodotFormat;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-
 namespace Cove.Server.HostedServices
 {
-
+    /// <summary>
+    /// A hosted service responsible for managing and updating server-owned actors periodically.
+    /// </summary>
     public class ActorUpdateService : IHostedService, IDisposable
     {
         private readonly ILogger<ActorUpdateService> _logger;
-        private Timer _timer;
-        private CoveServer server;
+        private readonly CoveServer _server;
+        private Timer? _timer;
+        private int _updateCounter = 0;
+        private readonly Dictionary<long, Vector3> _pastTransforms = new();
+        private const int IdleUpdateThreshold = 30;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ActorUpdateService"/> class.
+        /// </summary>
+        /// <param name="logger">The logger used for logging service operations.</param>
+        /// <param name="server">The server instance that owns this service.</param>
+        /// <exception cref="ArgumentNullException">Thrown when either <paramref name="logger"/> or <paramref name="server"/> is null.</exception>
         public ActorUpdateService(ILogger<ActorUpdateService> logger, CoveServer server)
         {
-            _logger = logger;
-            this.server = server;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _server = server ?? throw new ArgumentNullException(nameof(server));
         }
 
-        // This method is called when the service is starting.
+        /// <summary>
+        /// Starts the <see cref="ActorUpdateService"/> and initializes the periodic timer for actor updates.
+        /// </summary>
+        /// <param name="cancellationToken">A token that signals when the service should stop.</param>
+        /// <returns>A completed <see cref="Task"/> indicating the service has started.</returns>
         public Task StartAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("ActorUpdateService is starting.");
-
-            // Setup a timer to trigger the task periodically.
-            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(1) / 12);
-
+            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(1000 / 12));
             return Task.CompletedTask;
         }
 
-        int idelUpdateCount = 30;
-        Dictionary<long, Vector3> pastTransforms = new Dictionary<long, Vector3>();
-        int updateI = 0;
-
-        // This is the method that will be triggered periodically by the timer.
-        private void DoWork(object state)
+        /// <summary>
+        /// Periodically invoked by the timer to update actors and synchronize their state with connected clients.
+        /// </summary>
+        /// <param name="state">Optional state parameter, unused in this implementation.</param>
+        private void DoWork(object? state)
         {
-            //_logger.LogInformation("ActorUpdateService is working.");
+            _updateCounter++;
 
-            updateI++;
-
-            foreach (PluginInstance plugin in server.loadedPlugins)
+            // Trigger updates for all loaded plugins.
+            foreach (var plugin in _server.LoadedPlugins)
             {
-                plugin.plugin.onUpdate();
+                plugin.plugin.OnUpdate();
             }
 
             try
             {
-
-                foreach (WFActor actor in server.serverOwnedInstances)
+                // Iterate through all server-owned instances and update their state.
+                foreach (var actor in _server.GetServerOwnedInstances())
                 {
-                    actor.onUpdate();
+                    actor.OnUpdate();
 
-                    if (!pastTransforms.ContainsKey(actor.InstanceID))
+                    if (!_pastTransforms.ContainsKey(actor.InstanceID))
                     {
-                        pastTransforms[actor.InstanceID] = Vector3.zero;
+                        _pastTransforms[actor.InstanceID] = Vector3.Zero;
                     }
 
-                    if (actor.pos != pastTransforms[actor.InstanceID] || (updateI == idelUpdateCount))
+                    // Send updates to clients if the actor has moved or at the idle update threshold.
+                    if (actor.Position != _pastTransforms[actor.InstanceID] || _updateCounter == IdleUpdateThreshold)
                     {
+                        var packet = new Dictionary<string, object>
+                        {
+                            { "type", "actor_update" },
+                            { "actor_id", actor.InstanceID },
+                            { "pos", actor.Position },
+                            { "rot", actor.Rotation }
+                        };
 
-                        Dictionary<string, object> packet = new Dictionary<string, object>();
-                        packet["type"] = "actor_update";
-                        packet["actor_id"] = actor.InstanceID;
-                        packet["pos"] = actor.pos;
-                        packet["rot"] = actor.rot;
-
-                        pastTransforms[actor.InstanceID] = actor.pos; // crude
-
-                        server.sendPacketToPlayers(packet);
+                        _pastTransforms[actor.InstanceID] = actor.Position;
+                        _server.SendPacketToPlayers(packet);
                     }
                 }
-
             }
             catch (InvalidOperationException e)
             {
-                //Console.WriteLine(e);
-                // just means the list was modified while iterating
-                // most likly a actor was added or removed because of a spawn or despawn
-                // nothing to worry about
+                // Log any iteration errors, usually caused by list modifications during iteration.
+                _logger.LogDebug("Actor list was modified during iteration: {Message}", e.Message);
             }
 
-            if (updateI >= idelUpdateCount)
+            if (_updateCounter >= IdleUpdateThreshold)
             {
-                updateI = 0;
+                _updateCounter = 0;
             }
-
         }
 
-        // This method is called when the service is stopping.
+        /// <summary>
+        /// Stops the <see cref="ActorUpdateService"/> and cancels the periodic timer.
+        /// </summary>
+        /// <param name="cancellationToken">A token that signals when the service should stop.</param>
+        /// <returns>A completed <see cref="Task"/> indicating the service has stopped.</returns>
         public Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("ActorUpdateService is stopping.");
-
-            // Stop the timer and dispose of it.
             _timer?.Change(Timeout.Infinite, 0);
-
             return Task.CompletedTask;
         }
 
-        // This method is called to dispose of the resources.
+        /// <summary>
+        /// Disposes of the resources used by the <see cref="ActorUpdateService"/>, including the timer.
+        /// </summary>
         public void Dispose()
         {
             _timer?.Dispose();
         }
     }
-
 }

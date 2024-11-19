@@ -3,39 +3,52 @@ using Cove.GodotFormat;
 
 namespace Cove.Server.Utils
 {
-    internal class WorldFile
+  internal static class WorldFile
+  {
+    /// <summary>
+    /// Reads point positions from a .tscn file based on the specified node group.
+    /// </summary>
+    /// <param name="nodeGroup">The group name to search for in the file.</param>
+    /// <param name="file">The content of the .tscn file as a string.</param>
+    /// <returns>A list of Vector3 points found in the specified group.</returns>
+    public static List<Vector3> ReadPoints(string nodeGroup, string file)
     {
+      var points = new List<Vector3>();
+      var lines = file.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+      var groupPattern = @"groups=\[([^\]]*)\]";
+      var transformPattern = @"Transform\(.*?,\s*(-?\d+\.?\d*),\s*(-?\d+\.?\d*),\s*(-?\d+\.?\d*)\s*\)";
 
-        // for reading the point positions from a .tscn file (main_zone.tscn)
-        public static List<Vector3> readPoints(string nodeGroup, string file)
+      for (int i = 0; i < lines.Length; i++)
+      {
+        var groupMatch = Regex.Match(lines[i], groupPattern);
+        if (groupMatch.Success && groupMatch.Groups[1].Value.Contains($"\"{nodeGroup}\""))
         {
-            List<Vector3> points = new List<Vector3>();
-
-            // split the file into lines
-            string[] lines = file.Split('\n');
-
-            for (int i = 0; i < lines.Length; i++)
+          if (i + 1 < lines.Length) // Ensure there's a next line to check
+          {
+            var transformMatch = Regex.Match(lines[i + 1], transformPattern);
+            if (transformMatch.Success)
             {
-
-                Match isFishPoint = Regex.Match(lines[i], @"groups=\[([^\]]*)\]");
-                if (isFishPoint.Success && isFishPoint.Groups[1].Value == $"\"{nodeGroup}\"")
-                {
-                    string transformPattern = @"Transform\(.*?,\s*(-?\d+\.?\d*),\s*(-?\d+\.?\d*),\s*(-?\d+\.?\d*)\s*\)";
-                    Match match = Regex.Match(lines[i + 1], transformPattern);
-
-                    string x = match.Groups[1].Value;
-                    string y = match.Groups[2].Value;
-                    string z = match.Groups[3].Value;
-
-                    Vector3 thisPoint = new Vector3(float.Parse(x), float.Parse(y), float.Parse(z));
-                    points.Add(thisPoint);
-                }
+              if (float.TryParse(transformMatch.Groups[1].Value, out var x) &&
+                  float.TryParse(transformMatch.Groups[2].Value, out var y) &&
+                  float.TryParse(transformMatch.Groups[3].Value, out var z))
+              {
+                points.Add(new Vector3(x, y, z));
+              }
+              else
+              {
+                Console.WriteLine($"Warning: Invalid transform values at line {i + 1}.");
+              }
             }
-
-            Console.WriteLine($"Found {points.Count} points of group \"{nodeGroup}\"");
-
-            return points;
+            else
+            {
+              Console.WriteLine($"Warning: Transform data not found for group \"{nodeGroup}\" at line {i + 1}.");
+            }
+          }
         }
+      }
 
+      Console.WriteLine($"Found {points.Count} points in group \"{nodeGroup}\".");
+      return points;
     }
+  }
 }

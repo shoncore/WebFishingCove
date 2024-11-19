@@ -1,222 +1,185 @@
-﻿// This read Godot's serialized format
-// https://docs.godotengine.org/en/stable/tutorials/io/binary_serialization_api.html
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using Cove.GodotFormat;
 
 namespace Cove.GodotFormat
 {
+  /// <summary>
+  /// A utility class for reading Godot's serialized data format.
+  /// </summary>
+  public class GodotReader
+  {
+    private readonly BinaryReader _reader;
 
-    public class GodotReader
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GodotReader"/> class.
+    /// </summary>
+    /// <param name="data">The binary data to read.</param>
+    public GodotReader(byte[] data)
     {
-
-        public byte[] data;
-        private BinaryReader reader;
-
-        public GodotReader(byte[] data)
-        {
-            this.data = data;
-            reader = new BinaryReader(new MemoryStream(data), System.Text.Encoding.UTF8);
-        }
-
-        public Dictionary<string, object> readPacket()
-        {
-            int type = reader.ReadInt32();
-
-            if (type != (int)GodotTypes.dictionaryValue)
-            {
-                //throw new Exception("Unable to decode a non-dictionary godot packet!");
-            }
-
-            Dictionary<string, object> dic = new Dictionary<string, object>();
-
-            try
-            {
-                dic = readDictionary();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("-- Error reading packet! --"); // incase we do have a error!
-                Console.WriteLine(e.ToString()); // incase we do have a error!
-            }
-
-            return dic;
-        }
-
-        private Object readNext()
-        {
-            int v = reader.ReadInt32();
-
-            int type = v & 0xFFFF;
-            int flags = v >> 16;
-
-            switch (type)
-            {
-                case (int)GodotTypes.nullValue:
-                    return null;
-
-                case (int)GodotTypes.dictionaryValue:
-                    return readDictionary();
-
-                case (int)GodotTypes.arrayValue:
-                    return readArray();
-
-                case (int)GodotTypes.stringValue:
-                    return readString();
-
-                case (int)GodotTypes.intValue:
-                    return readInt(flags);
-
-                case (int)GodotTypes.vector3Value:
-                    return readVector3();
-
-                case (int)GodotTypes.quatValue:
-                    return readQuat();
-
-                case (int)GodotTypes.boolValue:
-                    return readBool();
-
-                case (int)GodotTypes.floatValue:
-                    return readFloat(flags);
-
-                case (int)GodotTypes.planeValue:
-                    return readPlane();
-
-                case (int)GodotTypes.vector2Value:
-                    return readVector2();
-
-                default:
-                    Console.WriteLine($"Unable to handel object of type: {type}");
-                    return new ReadError();
-            }
-        }
-
-        private Plane readPlane()
-        {
-            float x = reader.ReadSingle();
-            float y = reader.ReadSingle();
-            float z = reader.ReadSingle();
-            float dist = reader.ReadSingle();
-
-            return new Plane(x, y, z, dist);
-        }
-
-        private double readFloat(int flags)
-        {
-            if ((flags & 1) == 1)
-            {
-                return reader.ReadDouble();
-            }
-            else
-            {
-                return reader.ReadSingle();
-            }
-        }
-
-        private bool readBool()
-        {
-            return reader.ReadInt32() != 0;
-        }
-
-        private Quat readQuat()
-        {
-            float x = reader.ReadSingle();
-            float y = reader.ReadSingle();
-            float z = reader.ReadSingle();
-            float w = reader.ReadSingle();
-            Quat quat = new Quat(x, y, z, w);
-
-            return quat;
-        }
-
-        private Vector2 readVector2()
-        {
-            float x = reader.ReadSingle();
-            float y = reader.ReadSingle();
-            Vector2 newVec = new(x, y);
-
-            return newVec;
-        }
-
-        private Vector3 readVector3()
-        {
-            float x = reader.ReadSingle();
-            float y = reader.ReadSingle();
-            float z = reader.ReadSingle();
-            Vector3 newVec = new(x, y, z);
-
-            return newVec;
-        }
-
-        private long readInt(int flags)
-        {
-            if ((flags & 1) == 1)
-            {
-                return reader.ReadInt64();
-            }
-            else
-            {
-                int v = reader.ReadInt32();
-                return v;
-            }
-        }
-
-        private string readString()
-        {
-            int stringLength = reader.ReadInt32();
-            char[] stringValue = reader.ReadChars(stringLength);
-
-            // this feild is padded to 4 bytes
-            if (4 - ((int)reader.BaseStream.Position % 4) != 4)
-            {
-                reader.ReadBytes(4 - ((int)reader.BaseStream.Position % 4));
-            }
-
-            return new string(stringValue);
-        }
-
-        private Dictionary<int, object> readArray()
-        {
-            Dictionary<int, object> array = new Dictionary<int, object>();
-
-            int elementCount = reader.ReadInt32() & 0x7FFFFFFF;
-
-            for (int i = 0; i < elementCount; i++)
-            {
-                object ins = readNext(); // read the next thing
-                array[i] = ins;
-            }
-
-            return array;
-        }
-
-        private Dictionary<string, object> readDictionary()
-        {
-
-            Dictionary<string, object> dic = new Dictionary<string, object>();
-
-            int elementCount = reader.ReadInt32() & 0x7FFFFFFF;
-
-            for (int i = 0; i < elementCount; i++)
-            {
-                object keyValue = readNext();
-                string key = "NullValue";
-
-                if (keyValue == null || !(keyValue is String)) // if the value is not a string (bad read) break the loop.
-                {
-                    Console.WriteLine("READ ERROR, KEY PROVIDED IS NOT A STRING!");
-                    break; //break from the loop to save the server!
-                }
-                else
-                {
-                    key = keyValue.ToString(); // ITS A STRING I SWEAR TO GOD! PLEASEEE
-                }
-
-                object value = readNext();
-
-                dic[key] = value;
-            }
-
-            return dic;
-        }
-
+      _reader = new BinaryReader(new MemoryStream(data), Encoding.UTF8);
     }
 
+    /// <summary>
+    /// Reads a Godot packet and returns it as a dictionary.
+    /// </summary>
+    /// <returns>A dictionary representation of the packet.</returns>
+    public Dictionary<string, object> ReadPacket()
+    {
+      try
+      {
+        int type = _reader.ReadInt32();
+        if (type != (int)GodotTypes.DictionaryValue)
+        {
+          throw new InvalidOperationException("The data is not a dictionary.");
+        }
+
+        return ReadDictionary();
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine("Error reading packet:");
+        Console.WriteLine(ex);
+        return new Dictionary<string, object>();
+      }
+    }
+
+    private object ReadNext()
+    {
+      int header = _reader.ReadInt32();
+      int type = header & 0xFFFF;
+      int flags = header >> 16;
+
+      return type switch
+      {
+          (int)GodotTypes.NullValue => null!,
+          (int)GodotTypes.DictionaryValue => ReadDictionary(),
+          (int)GodotTypes.ArrayValue => ReadArray(),
+          (int)GodotTypes.StringValue => ReadString(),
+          (int)GodotTypes.IntValue => ReadInt(flags),
+          (int)GodotTypes.Vector3Value => ReadVector3(),
+          (int)GodotTypes.QuatValue => ReadQuat(),
+          (int)GodotTypes.BoolValue => ReadBool(),
+          (int)GodotTypes.FloatValue => ReadFloat(flags),
+          (int)GodotTypes.PlaneValue => ReadPlane(),
+          (int)GodotTypes.Vector2Value => ReadVector2(),
+          _ => new ReadError($"Unsupported object type: {type}")
+      };
+    }
+
+    private Plane ReadPlane()
+    {
+      return new Plane(
+          _reader.ReadSingle(),
+          _reader.ReadSingle(),
+          _reader.ReadSingle(),
+          _reader.ReadSingle()
+      );
+    }
+
+    private double ReadFloat(int flags)
+    {
+      return (flags & 1) == 1 ? _reader.ReadDouble() : _reader.ReadSingle();
+    }
+
+    private bool ReadBool()
+    {
+      return _reader.ReadInt32() != 0;
+    }
+
+    private Quat ReadQuat()
+    {
+      return new Quat(
+          _reader.ReadSingle(),
+          _reader.ReadSingle(),
+          _reader.ReadSingle(),
+          _reader.ReadSingle()
+      );
+    }
+
+    private Vector2 ReadVector2()
+    {
+      return new Vector2(
+          _reader.ReadSingle(),
+          _reader.ReadSingle()
+      );
+    }
+
+    private Vector3 ReadVector3()
+    {
+      return new Vector3(
+          _reader.ReadSingle(),
+          _reader.ReadSingle(),
+          _reader.ReadSingle()
+      );
+    }
+
+    private long ReadInt(int flags)
+    {
+      return (flags & 1) == 1 ? _reader.ReadInt64() : _reader.ReadInt32();
+    }
+
+    private string ReadString()
+    {
+      int length = _reader.ReadInt32();
+      char[] chars = _reader.ReadChars(length);
+
+      // Padding to align to 4 bytes
+      int padding = (4 - (int)(_reader.BaseStream.Position % 4)) % 4;
+      _reader.ReadBytes(padding);
+
+      return new string(chars);
+    }
+
+    private Dictionary<int, object> ReadArray()
+    {
+      int count = _reader.ReadInt32() & 0x7FFFFFFF;
+      var array = new Dictionary<int, object>(count);
+
+      for (int i = 0; i < count; i++)
+      {
+        array[i] = ReadNext();
+      }
+
+      return array;
+    }
+
+    private Dictionary<string, object> ReadDictionary()
+    {
+      int count = _reader.ReadInt32() & 0x7FFFFFFF;
+      var dictionary = new Dictionary<string, object>(count);
+
+      for (int i = 0; i < count; i++)
+      {
+        object keyObj = ReadNext();
+        if (keyObj is not string key)
+        {
+          Console.WriteLine("Error: Dictionary key is not a string.");
+          break;
+        }
+
+        object value = ReadNext();
+        dictionary[key] = value;
+      }
+
+      return dictionary;
+    }
+  }
+
+  /// <summary>
+  /// Represents an error in reading an object from the Godot data format.
+  /// </summary>
+  public class ReadError
+  {
+    public string Message { get; }
+
+    public ReadError(string message)
+    {
+      Message = message;
+    }
+
+    public override string ToString() => $"ReadError: {Message}";
+  }
 }

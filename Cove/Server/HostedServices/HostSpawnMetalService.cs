@@ -1,62 +1,119 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+
 namespace Cove.Server.HostedServices
 {
+    /// <summary>
+    /// A hosted service responsible for managing the spawning of metal instances.
+    /// </summary>
     public class HostSpawnMetalService : IHostedService, IDisposable
     {
         private readonly ILogger<HostSpawnMetalService> _logger;
-        private Timer _timer;
-        private CoveServer server;
+        private readonly CoveServer _server;
+        private Timer? _timer;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HostSpawnMetalService"/> class.
+        /// </summary>
+        /// <param name="logger">The logger used for logging service operations.</param>
+        /// <param name="server">The server instance that owns this service.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="logger"/> or <paramref name="server"/> is null.</exception>
         public HostSpawnMetalService(ILogger<HostSpawnMetalService> logger, CoveServer server)
         {
-            _logger = logger;
-            this.server = server;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _server = server ?? throw new ArgumentNullException(nameof(server));
         }
 
-        // This method is called when the service is starting.
+        /// <summary>
+        /// Starts the <see cref="HostSpawnMetalService"/> and initializes the periodic timer.
+        /// </summary>
+        /// <param name="cancellationToken">A token that signals when the service should stop.</param>
+        /// <returns>A completed <see cref="Task"/> indicating the service has started.</returns>
         public Task StartAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("HostSpawnMetalService is starting.");
-
-            // Setup a timer to trigger the task periodically.
             _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(8));
-
             return Task.CompletedTask;
         }
 
-        // This is the method that will be triggered periodically by the timer.
-        private void DoWork(object state)
+        /// <summary>
+        /// Periodically invoked by the timer to manage metal spawning.
+        /// </summary>
+        /// <param name="state">Optional state parameter, unused in this implementation.</param>
+        private void DoWork(object? state)
         {
             _logger.LogInformation("HostSpawnMetalService is working.");
 
-            // still got no idea
-            server.gameLobby.SetData("server_browser_value", "0");
-
-            int metalCount = server.serverOwnedInstances.FindAll(a => a.Type == "metal_spawn").Count;
-            if (metalCount > 7)
-                return;
-
-            if (server.shouldSpawnMetal)
-                server.spawnMetal();
-
+            try
+            {
+                UpdateServerBrowserValue();
+                ManageMetalSpawning();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred during HostSpawnMetalService execution.");
+            }
         }
 
-        // This method is called when the service is stopping.
+        /// <summary>
+        /// Updates the server browser value in the game lobby.
+        /// </summary>
+        private void UpdateServerBrowserValue()
+        {
+            try
+            {
+                _server.GameLobby.SetData("server_browser_value", "0");
+                _logger.LogDebug("Updated server browser value.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Failed to update server browser value: {Message}", ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Manages the spawning of metal instances based on server settings and current instance count.
+        /// </summary>
+        private void ManageMetalSpawning()
+        {
+            try
+            {
+                var metalCount = _server.ServerOwnedInstances.Count(a => a.Type == "metal_spawn");
+                _logger.LogDebug("Current metal count: {Count}", metalCount);
+
+                if (metalCount > 7)
+                {
+                    _logger.LogInformation("Metal spawn threshold reached. Skipping spawn.");
+                    return;
+                }
+
+                if (_server.ShouldSpawnMetal)
+                {
+                    _server.SpawnMetal();
+                    _logger.LogInformation("Spawned a metal instance.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to spawn metal instance.");
+            }
+        }
+
+        /// <summary>
+        /// Stops the <see cref="HostSpawnMetalService"/> and cancels the periodic timer.
+        /// </summary>
+        /// <param name="cancellationToken">A token that signals when the service should stop.</param>
+        /// <returns>A completed <see cref="Task"/> indicating the service has stopped.</returns>
         public Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("HostSpawnMetalService is stopping.");
-
-            // Stop the timer and dispose of it.
             _timer?.Change(Timeout.Infinite, 0);
-
             return Task.CompletedTask;
         }
 
-        // This method is called to dispose of the resources.
+        /// <summary>
+        /// Disposes of the resources used by the <see cref="HostSpawnMetalService"/>, including the timer.
+        /// </summary>
         public void Dispose()
         {
             _timer?.Dispose();

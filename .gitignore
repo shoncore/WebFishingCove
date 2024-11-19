@@ -10,3 +10,4 @@ bin/
 /worlds/*.tscn
 WFServer/worlds/main_zone.tscn
 Cove/worlds/main_zone.tscn
+*.csproj.user

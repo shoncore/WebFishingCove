@@ -1,136 +1,176 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Cove.Server.Actor;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-
-
 
 namespace Cove.Server.HostedServices
 {
-    public class HostSpawnService : IHostedService, IDisposable
+  /// <summary>
+  /// A hosted service responsible for periodically spawning and managing server-owned instances.
+  /// </summary>
+  /// <remarks>
+  /// Initializes a new instance of the <see cref="HostSpawnService"/> class.
+  /// </remarks>
+  /// <param name="logger">The logger used for logging service operations.</param>
+  /// <param name="server">The server instance that owns this service.</param>
+  /// <exception cref="ArgumentNullException">Thrown when <paramref name="logger"/> or <paramref name="server"/> is null.</exception>
+  public class HostSpawnService(ILogger<HostSpawnService> logger, CoveServer server) : IHostedService, IDisposable
     {
-        private readonly ILogger<HostSpawnService> _logger;
-        private Timer _timer;
-        private CoveServer server;
+        private readonly ILogger<HostSpawnService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        private readonly CoveServer _server = server ?? throw new ArgumentNullException(nameof(server));
+        private Timer? _timer;
+        private float _rainChance = 0f;
 
-        public HostSpawnService(ILogger<HostSpawnService> logger, CoveServer server)
-        {
-            _logger = logger;
-            this.server = server;
-        }
-
-        // This method is called when the service is starting.
-        public Task StartAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Starts the <see cref="HostSpawnService"/> and initializes the periodic timer for spawning instances.
+    /// </summary>
+    /// <param name="cancellationToken">A token that signals when the service should stop.</param>
+    /// <returns>A completed <see cref="Task"/> indicating the service has started.</returns>
+    public Task StartAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("HostSpawnService is starting.");
-
             _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
-
             return Task.CompletedTask;
         }
 
-        private float rainChance = 0f;
-
-        // This is the method that will be triggered periodically by the timer.
-        private void DoWork(object state)
+        /// <summary>
+        /// Periodically invoked by the timer to spawn and manage server-owned instances.
+        /// </summary>
+        /// <param name="state">Optional state parameter, unused in this implementation.</param>
+        private void DoWork(object? state)
         {
             _logger.LogInformation("HostSpawnService is working.");
 
-            // remove old instances!
             try
             {
-                foreach (WFActor inst in server.serverOwnedInstances)
+                RemoveExpiredInstances();
+
+                var type = DetermineSpawnType();
+                SpawnType(type);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred during HostSpawnService work.");
+            }
+        }
+
+        /// <summary>
+        /// Removes expired instances from the server.
+        /// </summary>
+        private void RemoveExpiredInstances()
+        {
+            try
+            {
+                var expiredInstances = _server.ServerOwnedInstances
+                    .Where(inst => inst.ShouldDespawn && (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - inst.SpawnTime.ToUnixTimeSeconds()) > inst.DespawnTime)
+                    .ToList();
+
+                foreach (var inst in expiredInstances)
                 {
-                    float instanceAge = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - inst.SpawnTime.ToUnixTimeSeconds();
-                    if (inst.despawn && instanceAge > inst.despawnTime)
-                    {
-                        server.serverOwnedInstances.Remove(inst);
-                        Console.WriteLine($"Removed {inst.Type}, Decayed");
-                    }
+                    _server.ServerOwnedInstances.Remove(inst);
+                    _logger.LogInformation("Removed {Type}, decayed.", inst.Type);
                 }
             }
-            catch (Exception e)
+            catch (InvalidOperationException ex)
             {
-                // most of the time this is just going to be an error 
-                // because the list was modified while iterating
-                // casued by a actorspawn or despawn, nothing huge.
-                _logger.LogError(e, "Error removing old instances");
+                _logger.LogDebug("Error during instance removal: {Message}", ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Determines the type of instance to spawn based on random factors and server settings.
+        /// </summary>
+        /// <returns>The type of instance to spawn.</returns>
+        private string DetermineSpawnType()
+        {
+            var random = new Random();
+            var beginningTypes = new[] { "fish", "none" };
+            var type = beginningTypes[random.Next(beginningTypes.Length)];
+
+            // Meteor spawn logic
+            if (random.NextDouble() < 0.01 && random.NextDouble() < 0.4 && _server.ShouldSpawnMeteor)
+            {
+                type = "meteor";
             }
 
-            Random ran = new Random();
-            string[] beginningTypes = ["fish", "none"];
-            string type = beginningTypes[ran.Next() % 2];
-
-            if (ran.NextSingle() < 0.01 && ran.NextSingle() < 0.4)
-            {
-                if (server.shouldSpawnMeteor)
-                    type = "meteor";
-            }
-
-            if (ran.NextSingle() < rainChance && ran.NextSingle() < .12f)
+            // Rain spawn logic
+            if (random.NextDouble() < _rainChance && random.NextDouble() < 0.12)
             {
                 type = "rain";
-                rainChance = 0;
+                _rainChance = 0; // Reset rain chance after spawn
             }
             else
             {
-                if (ran.NextSingle() < .75f)
-                    rainChance += .001f * server.rainMultiplyer;
+                if (random.NextDouble() < 0.75)
+                {
+                    _rainChance += 0.001f * _server.RainMultiplier;
+                }
             }
 
-            if (ran.NextSingle() < 0.01 && ran.NextSingle() < 0.25)
+            // Void portal spawn logic
+            if (random.NextDouble() < 0.01 && random.NextDouble() < 0.25 && _server.ShouldSpawnPortal)
             {
-                if (server.shouldSpawnPortal)
-                    type = "void_portal";
+                type = "void_portal";
             }
 
+            return type;
+        }
+
+        /// <summary>
+        /// Spawns an instance of the specified type.
+        /// </summary>
+        /// <param name="type">The type of instance to spawn.</param>
+        private void SpawnType(string type)
+        {
             switch (type)
             {
-
                 case "none":
                     break;
 
                 case "fish":
-                    // dont spawn too many because it WILL LAG players!
-                    if (server.serverOwnedInstances.Count > 15)
-                        return;
-                    WFActor a = server.spawnFish();
+                    // Prevent excessive fish spawning to avoid lag
+                    if (_server.ServerOwnedInstances.Count > 15) return;
+                    _server.SpawnFish();
+                    _logger.LogInformation("Spawned a fish.");
                     break;
 
                 case "meteor":
-                    server.spawnFish("fish_spawn_alien");
+                    _server.SpawnFish("fish_spawn_alien");
+                    _logger.LogInformation("Spawned a meteor.");
                     break;
 
                 case "rain":
-                    server.spawnRainCloud();
+                    _server.SpawnRainCloud();
+                    _logger.LogInformation("Spawned rain.");
                     break;
 
                 case "void_portal":
-                    server.spawnVoidPortal();
+                    _server.SpawnVoidPortal();
+                    _logger.LogInformation("Spawned a void portal.");
                     break;
 
+                default:
+                    _logger.LogWarning("Unknown spawn type: {Type}", type);
+                    break;
             }
-
         }
 
-        // This method is called when the service is stopping.
+        /// <summary>
+        /// Stops the <see cref="HostSpawnService"/> and cancels the periodic timer.
+        /// </summary>
+        /// <param name="cancellationToken">A token that signals when the service should stop.</param>
+        /// <returns>A completed <see cref="Task"/> indicating the service has stopped.</returns>
         public Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("HostSpawnService is stopping.");
-
-            // Stop the timer and dispose of it.
             _timer?.Change(Timeout.Infinite, 0);
-
             return Task.CompletedTask;
         }
 
-        // This method is called to dispose of the resources.
+        /// <summary>
+        /// Disposes of the resources used by the <see cref="HostSpawnService"/>, including the timer.
+        /// </summary>
         public void Dispose()
         {
             _timer?.Dispose();
         }
     }
-
 }

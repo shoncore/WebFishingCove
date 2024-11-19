@@ -1,43 +1,59 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Cove.Server
+﻿namespace Cove.Server
 {
     public partial class CoveServer
     {
-        // purely for debug
-        void printStringDict(Dictionary<string, object> obj, string sub = "")
+        /// <summary>
+        /// Recursively prints the contents of a dictionary with string keys for debugging purposes.
+        /// </summary>
+        /// <param name="obj">The dictionary to print.</param>
+        /// <param name="prefix">The prefix for nested keys.</param>
+        private void PrintStringDictionary(Dictionary<string, object> obj, string prefix = "")
         {
-            foreach (var kvp in obj)
+            foreach (var (key, value) in obj)
             {
-                if (kvp.Value is Dictionary<string, object>)
+                var fullKey = string.IsNullOrEmpty(prefix) ? key : $"{prefix}.{key}";
+
+                switch (value)
                 {
-                    printStringDict((Dictionary<string, object>)kvp.Value, sub + "." + kvp.Key);
-                }
-                else if (kvp.Value is Dictionary<int, object>)
-                {
-                    printArray((Dictionary<int, object>)kvp.Value, sub + "." + kvp.Key);
-                } else {
-                    Console.WriteLine($"{sub} {kvp.Key}: {kvp.Value}");
+                    case Dictionary<string, object> stringDict:
+                        PrintStringDictionary(stringDict, fullKey);
+                        break;
+
+                    case Dictionary<int, object> intDict:
+                        PrintArray(intDict, fullKey);
+                        break;
+
+                    default:
+                        Console.WriteLine($"{fullKey}: {value}");
+                        break;
                 }
             }
         }
-        void printArray(Dictionary<int, object> obj, string sub = "")
+
+        /// <summary>
+        /// Recursively prints the contents of a dictionary with integer keys for debugging purposes.
+        /// </summary>
+        /// <param name="obj">The dictionary to print.</param>
+        /// <param name="prefix">The prefix for nested keys.</param>
+        private void PrintArray(Dictionary<int, object> obj, string prefix = "")
         {
-            foreach (var kvp in obj)
+            foreach (var (key, value) in obj)
             {
-                if (kvp.Value is Dictionary<string, object>)
+                var fullKey = string.IsNullOrEmpty(prefix) ? key.ToString() : $"{prefix}.{key}";
+
+                switch (value)
                 {
-                    printStringDict((Dictionary<string, object>)kvp.Value, sub + "." + kvp.Key);
-                }
-                else if (kvp.Value is Dictionary<int, object>)
-                {
-                    printArray((Dictionary<int, object>)kvp.Value, sub + "." + kvp.Key);
-                } else {
-                    Console.WriteLine($"{sub} {kvp.Key}: {kvp.Value}");
+                    case Dictionary<string, object> stringDict:
+                        PrintStringDictionary(stringDict, fullKey);
+                        break;
+
+                    case Dictionary<int, object> intDict:
+                        PrintArray(intDict, fullKey);
+                        break;
+
+                    default:
+                        Console.WriteLine($"{fullKey}: {value}");
+                        break;
                 }
             }
         }

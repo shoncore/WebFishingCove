@@ -2,85 +2,103 @@
 
 namespace Cove.Server.Utils
 {
-    public class ConfigReader
+  /// <summary>
+  /// Utility class for reading configuration files.
+  /// </summary>
+  public class ConfigReader
+  {
+    /// <summary>
+    /// Reads configuration from a file. If the file does not exist, attempts to read it from embedded resources.
+    /// </summary>
+    /// <param name="fileName">The name of the configuration file.</param>
+    /// <returns>A dictionary containing configuration key-value pairs.</returns>
+    public static Dictionary<string, string> ReadConfig(string fileName)
     {
-        public static Dictionary<string, string> ReadConfig(string fileName)
+      string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
+
+      if (File.Exists(filePath))
+      {
+        string fileContent = File.ReadAllText(filePath);
+        return ParseConfig(fileContent);
+      }
+      else
+      {
+        string resourceName = Assembly.GetExecutingAssembly().GetName().Name ?? string.Empty;
+        if (string.IsNullOrEmpty(resourceName))
+          throw new Exception("Assembly name is null");
+
+        string embeddedResourceName = $"{resourceName}.{fileName}";
+
+        bool resourceExists = Assembly.GetExecutingAssembly()
+            .GetManifestResourceNames()
+            .Any(name => name.Equals(embeddedResourceName, StringComparison.OrdinalIgnoreCase));
+
+        if (resourceExists)
         {
-            string filePath = AppDomain.CurrentDomain.BaseDirectory + fileName;
-            if (File.Exists(filePath))
-            {
-                return ReadFile(File.ReadAllText(filePath));
-            }
-            else
-            {
-                bool assemblyHasConfig = false;
-                string resourceName = Assembly.GetExecutingAssembly().GetName().Name;
-                Assembly.GetExecutingAssembly().GetManifestResourceNames().ToList().ForEach(name =>
-                {
-                    if (name == resourceName + "." + fileName)
-                    {
-                        assemblyHasConfig = true;
-                    }
-                });
-                if (assemblyHasConfig)
-                {
-                    string fileContence = readFromAssembly(resourceName + "." + fileName);
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"Using default {fileName}, it has been added to the root directory for editing!");
-                    Console.ResetColor();
+          string fileContent = ReadFromAssembly(embeddedResourceName);
+          Console.ForegroundColor = ConsoleColor.Green;
+          Console.WriteLine($"Using default {fileName}, it has been added to the root directory for editing!");
+          Console.ResetColor();
 
-                    File.WriteAllText(filePath, fileContence);
+          File.WriteAllText(filePath, fileContent);
 
-                    return ReadFile(fileContence);
-                }
-                else
-                {
-                    throw new Exception($"Cannot find config file that is trying to be read: {fileName}");
-                }
-            }
+          return ParseConfig(fileContent);
         }
-
-        private static string readFromAssembly(string fileIdentifyer)
+        else
         {
-
-            using (Stream fileStream = Assembly.GetExecutingAssembly().GetManifestResourceStream(fileIdentifyer))
-            {
-                if (fileStream != null)
-                {
-                    StreamReader reader = new StreamReader(fileStream);
-                    string content = reader.ReadToEnd();
-
-                    return content;
-
-                }
-                else
-                {
-                    throw new Exception("Cant file file in sssembly!");
-                }
-            }
-
+          throw new Exception($"Cannot find config file '{fileName}' to read.");
         }
-
-        public static Dictionary<string, string> ReadFile(string fileContent)
-        {
-            string[] fileLines = fileContent.Split("\n");
-            Dictionary<string, string> configValues = new Dictionary<string, string>();
-
-            for (int i = 0; i < fileLines.Length; i++)
-            {
-                string line = fileLines[i].Trim();
-                // if the line is a comment
-                if (line.ToCharArray().Length == 0 || line.Substring(0, 1) == "#")
-                {
-                    continue;
-                }
-
-                string[] parts = line.Split("=");
-                configValues[parts[0].Trim()] = parts[1].Trim();
-
-            }
-
-            return configValues;
-        }
+      }
     }
+
+    /// <summary>
+    /// Reads an embedded resource from the assembly.
+    /// </summary>
+    /// <param name="resourceName">The name of the embedded resource.</param>
+    /// <returns>The content of the resource as a string.</returns>
+    private static string ReadFromAssembly(string resourceName)
+    {
+      using Stream stream = Assembly.GetExecutingAssembly()
+          .GetManifestResourceStream(resourceName)
+          ?? throw new Exception($"Cannot find embedded resource '{resourceName}' in assembly.");
+
+      using StreamReader reader = new(stream);
+      return reader.ReadToEnd();
+    }
+
+    /// <summary>
+    /// Parses the content of a configuration file into a dictionary.
+    /// </summary>
+    /// <param name="fileContent">The content of the configuration file.</param>
+    /// <returns>A dictionary containing configuration key-value pairs.</returns>
+    public static Dictionary<string, string> ParseConfig(string fileContent)
+    {
+      var configValues = new Dictionary<string, string>();
+      var fileLines = fileContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+      foreach (string line in fileLines)
+      {
+        string trimmedLine = line.Trim();
+
+        // Skip empty lines and comments
+        if (string.IsNullOrWhiteSpace(trimmedLine) || trimmedLine.StartsWith("#"))
+          continue;
+
+        int equalsIndex = trimmedLine.IndexOf('=');
+        if (equalsIndex > 0)
+        {
+          string key = trimmedLine.Substring(0, equalsIndex).Trim();
+          string value = trimmedLine.Substring(equalsIndex + 1).Trim();
+          configValues[key] = value;
+        }
+        else
+        {
+          // Handle lines without an '=' character
+          Console.WriteLine($"Warning: Invalid config line '{trimmedLine}'");
+        }
+      }
+
+      return configValues;
+    }
+  }
 }

@@ -1,181 +1,175 @@
-﻿namespace Cove.GodotFormat
-{
+﻿using System;
 
+namespace Cove.GodotFormat
+{
+    /// <summary>
+    /// Represents a 3D vector with x, y, and z components.
+    /// </summary>
     public class Vector3
     {
-        public float x;
-        public float y;
-        public float z;
+        public float X { get; }
+        public float Y { get; }
+        public float Z { get; }
+
+        public static readonly Vector3 Zero = new(0, 0, 0);
 
         public Vector3(float x, float y, float z)
         {
-            this.x = x;
-            this.y = y;
-            this.z = z;
+            X = x;
+            Y = y;
+            Z = z;
         }
 
-        // Zero vector
-        public static Vector3 zero = new Vector3(0, 0, 0);
+        public static Vector3 operator +(Vector3 a, Vector3 b) => new(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
 
-        public static Vector3 operator +(Vector3 a, Vector3 b)
-        {
-            return new Vector3(a.x + b.x, a.y + b.y, a.z + b.z);
-        }
+        public static Vector3 operator -(Vector3 a, Vector3 b) => new(a.X - b.X, a.Y - b.Y, a.Z - b.Z);
 
-        public static Vector3 operator -(Vector3 a, Vector3 b)
-        {
-            return new Vector3(a.x - b.x, a.y - b.y, a.z - b.z);
-        }
-
-        public static Vector3 operator *(Vector3 a, float scalar)
-        {
-            return new Vector3(a.x * scalar, a.y * scalar, a.z * scalar);
-        }
+        public static Vector3 operator *(Vector3 a, float scalar) => new(a.X * scalar, a.Y * scalar, a.Z * scalar);
 
         public static Vector3 operator /(Vector3 a, float scalar)
         {
-            if (scalar == 0)
-            {
-                throw new DivideByZeroException("Cannot divide by zero.");
-            }
-            return new Vector3(a.x / scalar, a.y / scalar, a.z / scalar);
+            if (scalar == 0) throw new DivideByZeroException("Cannot divide by zero.");
+            return new Vector3(a.X / scalar, a.Y / scalar, a.Z / scalar);
         }
 
-        public static float Dot(Vector3 a, Vector3 b)
-        {
-            return a.x * b.x + a.y * b.y + a.z * b.z;
-        }
+    public static float Dot(Vector3 a, Vector3 b)
+    {
+      return a.X * b.X + a.Y * b.Y + a.Z * b.Z;
+    }
 
-        public static Vector3 Cross(Vector3 a, Vector3 b)
-        {
-            return new Vector3(
-                a.y * b.z - a.z * b.y,
-                a.z * b.x - a.x * b.z,
-                a.x * b.y - a.y * b.x
-            );
-        }
+    public static Vector3 Cross(Vector3 a, Vector3 b)
+    {
+      return new(
+        a.Y * b.Z - a.Z * b.Y,
+        a.Z * b.X - a.X * b.Z,
+        a.X * b.Y - a.Y * b.X
+    );
+    }
 
-        public float Magnitude()
-        {
-            return (float)Math.Sqrt(x * x + y * y + z * z);
-        }
+    public float Magnitude()
+    {
+      return (float)Math.Sqrt(X * X + Y * Y + Z * Z);
+    }
 
-        public Vector3 Normalized()
+    public Vector3 Normalize()
         {
             float magnitude = Magnitude();
-            if (magnitude == 0)
-            {
-                throw new InvalidOperationException("Cannot normalize a zero vector.");
-            }
+            if (magnitude == 0) throw new InvalidOperationException("Cannot normalize a zero vector.");
             return this / magnitude;
         }
 
-        public override string ToString()
-        {
-            return $"({x}, {y}, {z})";
-        }
+    public override string ToString()
+    {
+      return $"({X}, {Y}, {Z})";
     }
+  }
 
+    /// <summary>
+    /// Represents a 2D vector with x and y components.
+    /// </summary>
     public class Vector2
     {
-        public float x;
-        public float y;
+        public float X { get; }
+        public float Y { get; }
+
+        public static readonly Vector2 Zero = new(0, 0);
 
         public Vector2(float x, float y)
         {
-            this.x = x;
-            this.y = y;
+            X = x;
+            Y = y;
         }
 
-        public static Vector2 zero = new Vector2(0, 0);
-
-        public float Magnitude()
-        {
-            return (float)Math.Sqrt(x * x + y * y);
-        }
-
-        public Vector2 Normalized()
-        {
-            float magnitude = Magnitude();
-            if (magnitude == 0)
-            {
-                throw new InvalidOperationException("Cannot normalize a zero vector.");
-            }
-            return new Vector2(x / magnitude, y / magnitude);
-        }
-
-        public float Angle()
-        {
-            return (float)Math.Atan2(y, x); // Returns the angle in radians between -π and π
-        }
-
-        public float AngleInDegrees()
-        {
-            return Angle() * (180f / (float)Math.PI); // Converts the angle from radians to degrees
-        }
-
-        public Vector2 Rotate(float angle)
-        {
-            float cosTheta = (float)Math.Cos(angle);
-            float sinTheta = (float)Math.Sin(angle);
-
-            float newX = x * cosTheta - y * sinTheta;
-            float newY = x * sinTheta + y * cosTheta;
-
-            return new Vector2(newX, newY);
-        }
-
-        public Vector2 RotateInDegrees(float angleDegrees)
-        {
-            float angleRadians = angleDegrees * ((float)Math.PI / 180f); // Convert degrees to radians
-            return Rotate(angleRadians);
-        }
-
-        public static Vector2 operator *(Vector2 a, float scalar)
-        {
-            return new Vector2(a.x * scalar, a.y * scalar);
-        }
-
-        public override string ToString()
-        {
-            return $"({x}, {y})";
-        }
+    public float Magnitude()
+    {
+      return (float)Math.Sqrt(X * X + Y * Y);
     }
 
+    public Vector2 Normalize()
+        {
+            float magnitude = Magnitude();
+            if (magnitude == 0) throw new InvalidOperationException("Cannot normalize a zero vector.");
+            return new Vector2(X / magnitude, Y / magnitude);
+        }
+
+    public float Angle()
+    {
+      return (float)Math.Atan2(Y, X);
+    }
+
+    public float AngleInDegrees()
+    {
+      return Angle() * (180f / (float)Math.PI);
+    }
+
+    public Vector2 Rotate(float angleRadians)
+        {
+            float cosTheta = (float)Math.Cos(angleRadians);
+            float sinTheta = (float)Math.Sin(angleRadians);
+            return new Vector2(
+                X * cosTheta - Y * sinTheta,
+                X * sinTheta + Y * cosTheta
+            );
+        }
+
+    public Vector2 RotateInDegrees(float angleDegrees)
+    {
+      return Rotate(angleDegrees * ((float)Math.PI / 180f));
+    }
+
+    public static Vector2 operator *(Vector2 a, float scalar) => new(a.X * scalar, a.Y * scalar);
+
+    public override string ToString()
+    {
+      return $"({X}, {Y})";
+    }
+  }
+
+    /// <summary>
+    /// Represents a quaternion for 3D rotations.
+    /// </summary>
     public class Quat
     {
-        public float x;
-        public float y;
-        public float z;
-        public float w;
+        public float X { get; }
+        public float Y { get; }
+        public float Z { get; }
+        public float W { get; }
 
         public Quat(float x, float y, float z, float w)
         {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-            this.w = w;
+            X = x;
+            Y = y;
+            Z = z;
+            W = w;
         }
-    }
 
+    public override string ToString()
+    {
+      return $"({X}, {Y}, {Z}, {W})";
+    }
+  }
+
+    /// <summary>
+    /// Represents a 3D plane in space.
+    /// </summary>
     public class Plane
     {
-        public float x;
-        public float y;
-        public float z;
-        public float distance;
+        public float X { get; }
+        public float Y { get; }
+        public float Z { get; }
+        public float Distance { get; }
 
         public Plane(float x, float y, float z, float distance)
         {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-            this.distance = distance;
+            X = x;
+            Y = y;
+            Z = z;
+            Distance = distance;
         }
-    }
 
-    public class ReadError
+    public override string ToString()
     {
-        public ReadError() { }
+      return $"Plane({X}, {Y}, {Z}, {Distance})";
     }
+  }
 }

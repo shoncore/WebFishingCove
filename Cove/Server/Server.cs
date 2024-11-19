@@ -1,362 +1,405 @@
-﻿using Steamworks;
+﻿using System.Collections.Concurrent;
+using Steamworks;
 using Steamworks.Data;
-using Cove.Server.Plugins;
 using Cove.GodotFormat;
 using Cove.Server.Actor;
+using Cove.Server.HostedServices;
 using Cove.Server.Utils;
 using Microsoft.Extensions.Hosting;
-using Cove.Server.HostedServices;
 using Microsoft.Extensions.Logging;
 
 namespace Cove.Server
 {
-    public partial class CoveServer
+  /// <summary>
+  /// Represents the Cove Server.
+  /// </summary>
+  /// <remarks>
+  /// Initializes a new instance of the <see cref="CoveServer"/> class.
+  /// </remarks>
+  /// <param name="logger">The logger instance.</param>
+  /// <param name="loggerFactory">The logger factory instance.</param>
+  public partial class CoveServer(ILogger<CoveServer> logger, ILoggerFactory loggerFactory)
+  {
+
+    /// <summary>
+    /// The game version.
+    /// </summary>
+    public readonly string WebFishingGameVersion = "1.1";
+
+    /// <summary>
+    /// Gets the maximum number of players allowed in the server.
+    /// </summary>
+    public int MaxPlayers { get; private set; } = 20;
+
+    /// <summary>
+    /// Gets the name of the server.
+    /// </summary>
+    public string ServerName { get; private set; } = "A Cove Dedicated Server";
+
+    /// <summary>
+    /// Gets the lobby code used for joining the server.
+    /// </summary>
+    public string LobbyCode { get; private set; } = GenerateLobbyCode();
+
+    /// <summary>
+    /// Gets a value indicating whether the server is joinable only by code.
+    /// </summary>
+    public bool CodeOnly { get; private set; } = true;
+
+    /// <summary>
+    /// Gets a value indicating whether the server is age restricted.
+    /// </summary>
+    public bool AgeRestricted { get; private set; } = false;
+
+    /// <summary>
+    /// Gets a value indicating whether the join message is hidden.
+    /// </summary>
+    public bool HideJoinMessage { get; private set; } = false;
+
+    /// <summary>
+    /// Gets the multiplier for rain spawn rate.
+    /// </summary>
+    public float RainMultiplier { get; private set; } = 1f;
+
+    /// <summary>
+    /// Gets a value indicating whether meteors should spawn.
+    /// </summary>
+    public bool ShouldSpawnMeteor { get; private set; } = true;
+
+    /// <summary>
+    /// Gets a value indicating whether metal should spawn.
+    /// </summary>
+    public bool ShouldSpawnMetal { get; private set; } = true;
+
+    /// <summary>
+    /// Gets a value indicating whether portals should spawn.
+    /// </summary>
+    public bool ShouldSpawnPortal { get; private set; } = true;
+
+    /// <summary>
+    /// Gets the list of admin Steam IDs.
+    /// </summary>
+    public List<string> Admins { get; private set; } = new();
+
+    /// <summary>
+    /// Gets the game lobby.
+    /// </summary>
+    public Lobby GameLobby { get; private set; }
+
+    /// <summary>
+    /// Gets the list of all players connected to the server.
+    /// </summary>
+    public List<WFPlayer> AllPlayers { get; private set; } = new();
+
+    /// <summary>
+    /// Gets the list of server-owned actor instances.
+    /// </summary>
+    public List<WFActor> ServerOwnedInstances { get; private set; } = new();
+
+    /// <summary>
+    /// Gets or sets the queue for incoming network packets.
+    /// </summary>
+    private ConcurrentQueue<P2Packet> PacketQueue { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the list of fish spawn points.
+    /// </summary>
+    private List<Vector3>? FishPoints { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of trash spawn points.
+    /// </summary>
+    private List<Vector3>? TrashPoints { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of shoreline points.
+    /// </summary>
+    private List<Vector3>? ShorelinePoints { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of hidden spots.
+    /// </summary>
+    private List<Vector3>? HiddenSpots { get; set; }
+
+    /// <summary>
+    /// Gets or sets the dictionary of hosted services.
+    /// </summary>
+    private Dictionary<string, IHostedService> Services { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the logger instance for the server.
+    /// </summary>
+    private ILogger<CoveServer> Logger { get; set; } = logger;
+
+    /// <summary>
+    /// Gets or sets the logger factory instance.
+    /// </summary>
+    private ILoggerFactory LoggerFactory { get; set; } = loggerFactory;
+
+    /// <summary>
+    /// Initializes the server asynchronously.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task InitAsync()
     {
-        public readonly string WebFishingGameVersion = "1.1"; // make sure to update this when the game updates!
-        public int MaxPlayers = 20;
-        public string ServerName = "A Cove Dedicated Server";
-        public string LobbyCode = new string(Enumerable.Range(0, 5).Select(_ => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[new Random().Next(36)]).ToArray());
-        public bool codeOnly = true;
-        public bool ageRestricted = false;
-        
-        public bool hideJoinMessage = false;
-
-        public float rainMultiplyer = 1f;
-        public bool shouldSpawnMeteor = true;
-        public bool shouldSpawnMetal = true;
-        public bool shouldSpawnPortal = true;
-
-        List<string> Admins = new();
-        public Lobby gameLobby = new Lobby();
-
-        public List<WFPlayer> AllPlayers = new();
-        public List<WFActor> serverOwnedInstances = new();
-
-        Thread cbThread;
-        Thread networkThread;
-
-        List<Vector3> fish_points;
-        List<Vector3> trash_points;
-        List<Vector3> shoreline_points;
-        List<Vector3> hidden_spot;
-
-        Dictionary<string, IHostedService> services = new();
-
-        public void Init()
-        {
-
-            cbThread = new(runSteamworksUpdate);
-            networkThread = new(RunNetwork);
-
-            Console.WriteLine("Loading world!");
-            string worldFile = $"{AppDomain.CurrentDomain.BaseDirectory}worlds/main_zone.tscn";
-            if (!File.Exists(worldFile))
-            {
-
-                Console.WriteLine("-- ERROR --");
-                Console.WriteLine("main_zone.tscn is missing!");
-                Console.WriteLine("please put a world file in the /worlds folder so the server may load it!");
-                Console.WriteLine("-- ERROR --");
-                Console.WriteLine("Press any key to exit");
-
-                Console.ReadKey();
-
-                return;
-            }
-
-            string banFile = $"{AppDomain.CurrentDomain.BaseDirectory}bans.txt";
-            if (!File.Exists(banFile))
-            {
-                FileStream f = File.Create(banFile);
-                f.Close(); // close the file
-            }
-
-            // get all the spawn points for fish!
-            string mapFile = File.ReadAllText(worldFile);
-            fish_points = WorldFile.readPoints("fish_spawn", mapFile);
-            trash_points = WorldFile.readPoints("trash_point", mapFile);
-            shoreline_points = WorldFile.readPoints("shoreline_point", mapFile);
-            hidden_spot = WorldFile.readPoints("hidden_spot", mapFile);
-
-            Console.WriteLine("World Loaded!");
-
-            Console.WriteLine("Reading server.cfg");
-
-            Dictionary<string, string> config = ConfigReader.ReadConfig("server.cfg");
-            foreach (string key in config.Keys)
-            {
-                switch (key)
-                {
-                    case "serverName":
-                        ServerName = config[key];
-                        break;
-
-                    case "maxPlayers":
-                        MaxPlayers = int.Parse(config[key]);
-                        break;
-
-                    case "code":
-                        LobbyCode = config[key].ToUpper();
-                        break;
-
-                    case "rainSpawnMultiplyer":
-                        rainMultiplyer = float.Parse(config[key]);
-                        break;
-
-                    case "codeOnly":
-                        codeOnly = getBoolFromString(config[key]);
-                        break;
-
-                    case "gameVersion":
-                        //WebFishingGameVersion = config[key];
-                        break;
-
-                    case "ageRestricted":
-                        ageRestricted = getBoolFromString(config[key]);
-                        break;
-
-                    case "pluginsEnabled":
-                        arePluginsEnabled = getBoolFromString(config[key]);
-                        break;
-
-                    case "hideJoinMessage":
-                        hideJoinMessage = getBoolFromString(config[key]);
-                        break;
-
-                    case "spawnMeteor":
-                        shouldSpawnMeteor = getBoolFromString(config[key]);
-                        break;
-
-                    case "spawnMetal":
-                        shouldSpawnMetal = getBoolFromString(config[key]);
-                        break;
-
-                    case "spawnPortal":
-                        shouldSpawnPortal = getBoolFromString(config[key]);
-                        break;
-
-                    default:
-                        Console.WriteLine($"\"{key}\" is not a supported config option!");
-                        continue;
-                }
-
-                Console.WriteLine($"Set \"{key}\" to \"{config[key]}\"");
-
-            }
-
-            Console.WriteLine("Server setup based on config!");
-
-            Console.WriteLine("Reading admins.cfg");
-            readAdmins();
-            Console.WriteLine("Setup finished, starting server!");
-
-            if (Directory.Exists($"{AppDomain.CurrentDomain.BaseDirectory}plugins"))
-            {
-                loadAllPlugins();
-            }
-            else
-            {
-                Directory.CreateDirectory($"{AppDomain.CurrentDomain.BaseDirectory}plugins");
-                Console.WriteLine("Created plugins folder!");
-            }
-
-            try
-            {
-                SteamClient.Init(3146520, false);
-            }
-            catch (SystemException e)
-            {
-                Console.WriteLine(e.Message);
-                return;
-            }
-
-            // thread for running steamworks callbacks
-            cbThread.IsBackground = true;
-            cbThread.Start();
-
-            // thread for getting network packets from steam
-            // i wish this could be a service, but when i tried it the packets got buffered and it was a mess
-            // like 10 minutes of delay within 30 seconds
-            networkThread.IsBackground = true;
-            networkThread.Start();
-            
-            bool LogServices = false;
-            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
-            {
-                if (LogServices)
-                    builder.AddConsole();
-            });
-
-            // Create a logger for each service that we need to run.
-            Logger<ActorUpdateService> actorServiceLogger = new Logger<ActorUpdateService>(loggerFactory);
-            Logger<HostSpawnService> hostSpawnServiceLogger = new Logger<HostSpawnService>(loggerFactory);
-            Logger<HostSpawnMetalService> hostSpawnMetalServiceLogger = new Logger<HostSpawnMetalService>(loggerFactory);
-            Logger<HLSServerListService> HLSServerListLogger = new Logger<HLSServerListService>(loggerFactory);
-
-            // Create the services that we need to run.
-            IHostedService actorUpdateService = new ActorUpdateService(actorServiceLogger, this);
-            IHostedService hostSpawnService = new HostSpawnService(hostSpawnServiceLogger, this);
-            IHostedService hostSpawnMetalService = new HostSpawnMetalService(hostSpawnMetalServiceLogger, this);
-            IHostedService hlsServerList = new HLSServerListService(HLSServerListLogger, this);
-
-            // Start the services.
-            actorUpdateService.StartAsync(CancellationToken.None);
-            hostSpawnService.StartAsync(CancellationToken.None);
-            hostSpawnMetalService.StartAsync(CancellationToken.None);
-            hlsServerList.StartAsync(CancellationToken.None);
-
-            // add them to the services dictionary so we can access them later if needed
-            services["actor_update"] = actorUpdateService;
-            services["host_spawn"] = hostSpawnService;
-            services["host_spawn_metal"] = hostSpawnMetalService;
-            services["hls_server_list"] = hlsServerList;
-
-            SteamMatchmaking.OnLobbyCreated += OnLobbyCreated;
-            void OnLobbyCreated(Result result, Lobby Lobby)
-            {
-                Lobby.SetJoinable(true); // make the server joinable to players!
-                Lobby.SetData("ref", "webfishing_gamelobby");
-                Lobby.SetData("version", WebFishingGameVersion);
-                Lobby.SetData("code", LobbyCode);
-                Lobby.SetData("type", codeOnly ? "code_only" : "public");
-                Lobby.SetData("public", "true");
-                Lobby.SetData("banned_players", "");
-                Lobby.SetData("age_limit", ageRestricted ? "true" : "false");
-                Lobby.SetData("cap", MaxPlayers.ToString());
-
-                SteamNetworking.AllowP2PPacketRelay(true);
-
-                Lobby.SetData("server_browser_value", "0"); // i have no idea!
-
-                Console.WriteLine("Lobby Created!");
-                Console.Write("Lobby Code: ");
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine(Lobby.GetData("code"));
-                Console.ResetColor();
-
-                gameLobby = Lobby;
-
-                // set the player count in the title
-                updatePlayercount();
-            }
-
-            SteamMatchmaking.OnLobbyMemberJoined += void (Lobby Lobby, Friend userJoining) =>
-            {
-                Console.WriteLine($"{userJoining.Name} [{userJoining.Id}] has joined the game!");
-                updatePlayercount();
-
-                WFPlayer newPlayer = new WFPlayer(userJoining.Id, userJoining.Name);
-                AllPlayers.Add(newPlayer);
-
-                Console.WriteLine($"{userJoining.Name} has been assigned the fisherID: {newPlayer.FisherID}");
-
-                foreach (PluginInstance plugin in loadedPlugins)
-                {
-                    plugin.plugin.onPlayerJoin(newPlayer);
-                }
-
-            };
-
-            SteamMatchmaking.OnLobbyMemberLeave += void (Lobby Lobby, Friend userLeaving) =>
-            {
-                Console.WriteLine($"{userLeaving.Name} [{userLeaving.Id}] has left the game!");
-                updatePlayercount();
-
-                foreach (var player in AllPlayers)
-                {
-                    if (player.SteamId == userLeaving.Id)
-                    {
-
-                        foreach (PluginInstance plugin in loadedPlugins)
-                        {
-                            plugin.plugin.onPlayerLeave(player);
-                        }
-
-                        AllPlayers.Remove(player);
-                        Console.WriteLine($"{userLeaving.Name} has been removed!");
-                    }
-                }
-            };
-
-            SteamNetworking.OnP2PSessionRequest += void (SteamId id) =>
-            {
-                foreach (Friend user in gameLobby.Members)
-                {
-                    if (user.Id == id.Value)
-                    {
-                        Console.WriteLine($"{user.Name} has connected via P2P");
-                        SteamNetworking.AcceptP2PSessionWithUser(id);
-                        return;
-                    }
-                }
-
-                Console.WriteLine($"Got P2P request from {id.Value}, but they are not in the lobby!");
-            };
-
-            // create the server
-            SteamMatchmaking.CreateLobbyAsync(maxMembers: MaxPlayers);
-        }
-        private bool getBoolFromString(string str)
-        {
-            if (str.ToLower() == "true")
-            {
-                return true;
-            }
-            else if (str.ToLower() == "false")
-            {
-                return false;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        void runSteamworksUpdate()
-        {
-            while (true)
-            {
-                SteamClient.RunCallbacks();
-            }
-        }
-
-        void RunNetwork()
-        {
-            while (true)
-            {
-                try
-                {
-                    for (int i = 0; i < 6; i++)
-                    {
-                        // we are going to check if there are any incoming net packets!
-                        if (SteamNetworking.IsP2PPacketAvailable(channel: i))
-                        {
-                            Steamworks.Data.P2Packet? packet = SteamNetworking.ReadP2PPacket(channel: i);
-                            if (packet != null)
-                            {
-                                OnNetworkPacket(packet.Value);
-                            }
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("-- Error responding to packet! --");
-                    Console.WriteLine(e.ToString());
-                }
-            }
-        }
-
-        void OnPlayerChat(string message, SteamId id)
-        {
-
-            WFPlayer sender = AllPlayers.Find(p => p.SteamId == id);
-            Console.WriteLine($"{sender.FisherName}: {message}");
-
-            foreach (PluginInstance plugin in loadedPlugins)
-            {
-                plugin.plugin.onChatMessage(sender, message);
-            }
-        }
+      Logger.LogInformation("Initializing server...");
+
+      if (!await LoadWorldAsync())
+      {
+        Logger.LogError("World file missing or invalid. Shutting down.");
+        return;
+      }
+
+      await SetupConfigurationAsync();
+
+      Logger.LogInformation("Loading admins...");
+      LoadAdmins();
+
+      await SetupPluginsAsync();
+
+      if (!InitializeSteamClient())
+      {
+        Logger.LogError("Failed to initialize Steam Client. Shutting down.");
+        return;
+      }
+
+      Logger.LogInformation("Starting background tasks...");
+      _ = Task.Run(() => RunSteamworksUpdateAsync());
+      _ = Task.Run(() => ProcessNetworkPacketsAsync());
+
+      await StartHostedServicesAsync();
+
+      Logger.LogInformation("Server initialization complete. Creating lobby...");
+      var lobbyResult = await SteamMatchmaking.CreateLobbyAsync(MaxPlayers);
+      if (lobbyResult.HasValue)
+      {
+        GameLobby = lobbyResult.Value;
+      }
+      else
+      {
+        Logger.LogError("Failed to create lobby.");
+        return;
+      }
+
+      Logger.LogInformation("Server is now running.");
     }
+
+    /// <summary>
+    /// Generates a random lobby code consisting of 5 alphanumeric characters.
+    /// </summary>
+    /// <returns>A 5-character string lobby code.</returns>
+    private static string GenerateLobbyCode()
+    {
+      const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      var random = new Random();
+      return new string(Enumerable.Range(0, 5).Select(_ => chars[random.Next(chars.Length)]).ToArray());
+    }
+
+    /// <summary>
+    /// Loads the world data asynchronously from the world file.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation, with a boolean indicating success.</returns>
+    private async Task<bool> LoadWorldAsync()
+    {
+      var worldFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "worlds", "main_zone.tscn");
+      if (!File.Exists(worldFilePath))
+      {
+        Logger.LogError("World file 'main_zone.tscn' is missing!");
+        return false;
+      }
+
+      var mapFile = await File.ReadAllTextAsync(worldFilePath);
+      FishPoints = WorldFile.ReadPoints("fish_spawn", mapFile);
+      TrashPoints = WorldFile.ReadPoints("trash_point", mapFile);
+      ShorelinePoints = WorldFile.ReadPoints("shoreline_point", mapFile);
+      HiddenSpots = WorldFile.ReadPoints("hidden_spot", mapFile);
+
+      Logger.LogInformation("World file loaded successfully.");
+      return true;
+    }
+
+    /// <summary>
+    /// Sets up the server configuration asynchronously by reading from the configuration file.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private async Task SetupConfigurationAsync()
+    {
+      Logger.LogInformation("Reading configuration...");
+      var config = ConfigReader.ReadConfig("server.cfg");
+
+      foreach (var (key, value) in config)
+      {
+        try
+        {
+          switch (key)
+          {
+            case "serverName":
+              ServerName = value;
+              break;
+            case "maxPlayers":
+              MaxPlayers = int.Parse(value);
+              break;
+            case "code":
+              LobbyCode = value.ToUpper();
+              break;
+            case "rainSpawnMultiplier":
+              RainMultiplier = float.Parse(value);
+              break;
+            case "codeOnly":
+              CodeOnly = GetBoolFromString(value);
+              break;
+            case "ageRestricted":
+              AgeRestricted = GetBoolFromString(value);
+              break;
+            case "hideJoinMessage":
+              HideJoinMessage = GetBoolFromString(value);
+              break;
+            case "spawnMeteor":
+              ShouldSpawnMeteor = GetBoolFromString(value);
+              break;
+            case "spawnMetal":
+              ShouldSpawnMetal = GetBoolFromString(value);
+              break;
+            case "spawnPortal":
+              ShouldSpawnPortal = GetBoolFromString(value);
+              break;
+            default:
+              Logger.LogWarning("Unsupported configuration key: {Key}", key);
+              break;
+          }
+        }
+        catch (Exception ex)
+        {
+          Logger.LogWarning("Error parsing config '{Key}': {ErrorMessage}", key, ex.Message);
+        }
+      }
+
+      await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Loads the list of admins from the 'admins.cfg' file.
+    /// </summary>
+    private void LoadAdmins()
+    {
+      var adminsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "admins.cfg");
+      if (File.Exists(adminsFilePath))
+      {
+        Admins = [.. File.ReadAllLines(adminsFilePath)];
+        Logger.LogInformation("{TotalAdmins} admins loaded.", Admins.Count);
+      }
+      else
+      {
+        Logger.LogWarning("Admins file not found.");
+      }
+    }
+
+    /// <summary>
+    /// Sets up the plugins asynchronously.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private async Task SetupPluginsAsync()
+    {
+      var pluginsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plugins");
+      if (!Directory.Exists(pluginsPath))
+      {
+        Directory.CreateDirectory(pluginsPath);
+        Logger.LogInformation("Created plugins directory.");
+      }
+
+      await Task.Run(() =>
+      {
+        // Simulate loading plugins
+        Logger.LogInformation("Loading plugins...");
+      });
+    }
+
+    /// <summary>
+    /// Initializes the Steam Client.
+    /// </summary>
+    /// <returns>True if initialization is successful; otherwise, false.</returns>
+    private bool InitializeSteamClient()
+    {
+      try
+      {
+        SteamClient.Init(3146520, false);
+        Logger.LogInformation("Steam Client initialized successfully.");
+        return true;
+      }
+      catch (Exception ex)
+      {
+        Logger.LogError("Error initializing Steam Client: {ErrorMessage}", ex.Message);
+        return false;
+      }
+    }
+
+    /// <summary>
+    /// Starts the hosted services asynchronously.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private async Task StartHostedServicesAsync()
+    {
+      Logger.LogInformation("Starting hosted services...");
+      var actorUpdateLogger = LoggerFactory.CreateLogger<ActorUpdateService>();
+      var hostSpawnLogger = LoggerFactory.CreateLogger<HostSpawnService>();
+      var hostSpawnMetalLogger = LoggerFactory.CreateLogger<HostSpawnMetalService>();
+
+      // Initialize services with appropriate loggers
+      Services["actor_update"] = new ActorUpdateService(actorUpdateLogger, this);
+      Services["host_spawn"] = new HostSpawnService(hostSpawnLogger, this);
+      Services["host_spawn_metal"] = new HostSpawnMetalService(hostSpawnMetalLogger, this);
+
+      foreach (var service in Services.Values)
+      {
+        await service.StartAsync(CancellationToken.None);
+      }
+    }
+
+    /// <summary>
+    /// Continuously runs Steamworks callbacks in a background task.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private static async Task RunSteamworksUpdateAsync()
+    {
+      while (true)
+      {
+        SteamClient.RunCallbacks();
+        await Task.Delay(16); // Prevent tight CPU loop
+      }
+    }
+
+    /// <summary>
+    /// Processes network packets asynchronously in a background task.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private async Task ProcessNetworkPacketsAsync()
+    {
+      while (true)
+      {
+        while (PacketQueue.TryDequeue(out var packet))
+        {
+          OnNetworkPacket(packet);
+        }
+
+        await Task.Delay(10);
+      }
+    }
+
+    /// <summary>
+    /// Converts a string to a boolean value.
+    /// </summary>
+    /// <param name="value">The string to convert.</param>
+    /// <returns>True if the string is "true" (case-insensitive); otherwise, false.</returns>
+    private static bool GetBoolFromString(string value) =>
+        value.Equals("true", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Gets an enumerable of server-owned actor instances.
+    /// </summary>
+    /// <returns>An enumerable of <see cref="WFActor"/>.</returns>
+    public IEnumerable<WFActor> GetServerOwnedInstances()
+    {
+      return ServerOwnedInstances;
+    }
+  }
 }

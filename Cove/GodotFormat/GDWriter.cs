@@ -1,152 +1,140 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Cove.GodotFormat
 {
-    public class GodotWriter
+    /// <summary>
+    /// Utility class for writing Godot's serialized data format.
+    /// </summary>
+    public static class GodotWriter
     {
-
+        /// <summary>
+        /// Converts a dictionary into a binary Godot packet.
+        /// </summary>
+        /// <param name="packet">The dictionary representing the packet.</param>
+        /// <returns>The binary representation of the packet.</returns>
         public static byte[] WriteGodotPacket(Dictionary<string, object> packet)
         {
-            MemoryStream stream = new MemoryStream();
-            BinaryWriter bw = new BinaryWriter(stream);
-
-            writeDictionary(packet, bw);
-
+            using var stream = new MemoryStream();
+            using var writer = new BinaryWriter(stream);
+            WriteDictionary(packet, writer);
             return stream.ToArray();
-
         }
 
-        private static void writeAny(object packet, BinaryWriter bw)
+        /// <summary>
+        /// Writes any supported type to the binary writer.
+        /// </summary>
+        private static void WriteAny(object? value, BinaryWriter writer)
         {
-            if (packet == null)
+            switch (value)
             {
-                bw.Write(0);
-            }
-            else if (packet is Dictionary<string, object>)
-            {
-                writeDictionary((Dictionary<string, object>)packet, bw);
-            }
-            else if (packet is string)
-            {
-                writeString((string)packet, bw);
-            }
-            else if (packet is int)
-            {
-                writeInt((int)packet, bw);
-            }
-            else if (packet is long)
-            {
-                writeLong((long)packet, bw);
-            }
-            else if (packet is Single)
-            {
-                writeSingle((Single)packet, bw);
-            }
-            else if (packet is Double)
-            {
-                writeDouble((Double)packet, bw);
-            }
-            else if (packet is bool)
-            {
-                writeBool((bool)packet, bw);
-            }
-            else if (packet is Dictionary<int, object>)
-            {
-                writeArray((Dictionary<int, object>)packet, bw);
-            }
-            else if (packet is Vector3)
-            {
-                writeVector3((Vector3)packet, bw);
+                case null:
+                    writer.Write(0);
+                    break;
+                case Dictionary<string, object> dict:
+                    WriteDictionary(dict, writer);
+                    break;
+                case string str:
+                    WriteString(str, writer);
+                    break;
+                case int i:
+                    WriteInt(i, writer);
+                    break;
+                case long l:
+                    WriteLong(l, writer);
+                    break;
+                case float f:
+                    WriteSingle(f, writer);
+                    break;
+                case double d:
+                    WriteDouble(d, writer);
+                    break;
+                case bool b:
+                    WriteBool(b, writer);
+                    break;
+                case Dictionary<int, object> array:
+                    WriteArray(array, writer);
+                    break;
+                case Vector3 vector3:
+                    WriteVector3(vector3, writer);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unsupported value type: {value.GetType().Name}");
             }
         }
 
-        private static void writeVector3(Vector3 packet, BinaryWriter bw)
+        private static void WriteVector3(Vector3 vector, BinaryWriter writer)
         {
-            bw.Write((int)7); // write v3 header
-
-            bw.Write((Single)packet.x);
-            bw.Write((Single)packet.y);
-            bw.Write((Single)packet.z);
+            writer.Write((int)GodotTypes.Vector3Value); // Header for Vector3
+            writer.Write(vector.X);
+            writer.Write(vector.Y);
+            writer.Write(vector.Z);
         }
 
-        private static void writeBool(bool packet, BinaryWriter bw)
+        private static void WriteBool(bool value, BinaryWriter writer)
         {
-            bw.Write((int)1);
-            bw.Write(packet ? 1 : 0);
+            writer.Write((int)GodotTypes.BoolValue);
+            writer.Write(value ? 1 : 0);
         }
 
-        private static void writeInt(int packet, BinaryWriter writer)
+        private static void WriteInt(int value, BinaryWriter writer)
         {
-            writer.Write((int)GodotTypes.intValue); // write the int value header!
-            writer.Write((int)packet);
+            writer.Write((int)GodotTypes.IntValue);
+            writer.Write(value);
         }
 
-        private static void writeLong(long packet, BinaryWriter writer)
+        private static void WriteLong(long value, BinaryWriter writer)
         {
-            writer.Write(65538); // write the int value header! this is the same as above but with the 64 bit header!
-            writer.Write((long)packet);
+            writer.Write((int)65538); // Int64 header
+            writer.Write(value);
         }
 
-        private static void writeSingle(Single packet, BinaryWriter writer)
+        private static void WriteSingle(float value, BinaryWriter writer)
         {
-            writer.Write((int)3);
-            writer.Write((Single)packet);
+            writer.Write((int)GodotTypes.FloatValue);
+            writer.Write(value);
         }
 
-        private static void writeDouble(Double packet, BinaryWriter writer)
+        private static void WriteDouble(double value, BinaryWriter writer)
         {
-            writer.Write((int)65539);// write the float value header! this is the same as above but with the 64 bit header!
-            writer.Write((Double)packet);
+            writer.Write((int)65539); // Float64 header
+            writer.Write(value);
         }
 
-        private static void writeString(string packet, BinaryWriter bw)
+        private static void WriteString(string value, BinaryWriter writer)
         {
-            bw.Write((int)4); // remeber to write the string header!
+            writer.Write((int)GodotTypes.StringValue); // Header for string
+            byte[] bytes = Encoding.UTF8.GetBytes(value);
+            writer.Write(bytes.Length);
+            writer.Write(bytes);
 
-            byte[] bytes = Encoding.UTF8.GetBytes(packet);
+            // Align to 4 bytes
+            int padding = (4 - (bytes.Length % 4)) % 4;
+            writer.Write(new byte[padding]);
+        }
 
-            bw.Write((int)bytes.Length);
-            // get the ammount to pad by!
+        private static void WriteArray(Dictionary<int, object> array, BinaryWriter writer)
+        {
+            writer.Write((int)GodotTypes.ArrayValue);
+            writer.Write(array.Count);
 
-            // Step 3: Write the actual bytes of the string
-            bw.Write(bytes);
-
-            // Step 4: Calculate padding needed to make the total length a multiple of 4
-            int padding = (4 - (bytes.Length % 4)) % 4; // Calculate padding
-
-            // Step 5: Write padding bytes (if needed)
-            for (int i = 0; i < padding; i++)
+            foreach (var value in array.Values)
             {
-                bw.Write((byte)0); // Write padding as zero bytes
+                WriteAny(value, writer);
             }
         }
 
-        private static void writeArray(Dictionary<int, object> packet, BinaryWriter writer)
+        private static void WriteDictionary(Dictionary<string, object> dictionary, BinaryWriter writer)
         {
-            // because we have a dic we need to write the correct byte info!
-            writer.Write((int)19); // make sure these are 4 bits as that is what godot is exspecting!
-            writer.Write((int)packet.Count);
+            writer.Write((int)GodotTypes.DictionaryValue);
+            writer.Write(dictionary.Count);
 
-            for (int i = 0; i < packet.Count; i++)
+            foreach (var pair in dictionary)
             {
-                writeAny(packet[i], writer);
-            }
-        }
-
-        private static void writeDictionary(Dictionary<string, object> packet, BinaryWriter writer)
-        {
-            // because we have a dic we need to write the correct byte info!
-            writer.Write((int)18); // make sure these are 4 bits as that is what godot is exspecting!
-            writer.Write((int)packet.Count);
-
-            foreach (KeyValuePair<string, object> pair in packet)
-            {
-                writeAny(pair.Key, writer);
-                writeAny(pair.Value, writer);
+                WriteAny(pair.Key, writer);
+                WriteAny(pair.Value, writer);
             }
         }
     }

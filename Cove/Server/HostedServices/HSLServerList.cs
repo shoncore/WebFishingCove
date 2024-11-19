@@ -1,112 +1,129 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
-
 
 namespace Cove.Server.HostedServices
 {
+    /// <summary>
+    /// Represents the request body sent to the HLS server list endpoint.
+    /// </summary>
     class RequestBody
     {
-        public string host { get; set; }
-        public string lobby_code { get; set; }
-        public string version { get; set; }
-        public string lobby_type { get; set; }
-        public int player_cap { get; set; }
-        public bool age_restricted { get; set; }
-        public string map { get; set; }
-        public string title { get; set; }
-        public string[] mods { get; set; }
-        public string country { get; set; }
-        public int current_players { get; set; }
+        public string Host { get; set; } = string.Empty;
+        public string LobbyCode { get; set; } = string.Empty;
+        public string Version { get; set; } = string.Empty;
+        public string LobbyType { get; set; } = string.Empty;
+        public int PlayerCap { get; set; }
+        public bool AgeRestricted { get; set; }
+        public string Map { get; set; } = "default"; // Placeholder, make configurable in the future
+        public string Title { get; set; } = string.Empty;
+        public string[] Mods { get; set; } = Array.Empty<string>(); // Placeholder, make configurable in the future
+        public string Country { get; set; } = string.Empty;
+        public int CurrentPlayers { get; set; }
     }
 
-    public class HLSServerListService : IHostedService, IDisposable
+  /// <summary>
+  /// A hosted service responsible for sending periodic heartbeats to the HLS server list endpoint.
+  /// </summary>
+  /// <remarks>
+  /// Initializes a new instance of the <see cref="HLSServerListService"/> class.
+  /// </remarks>
+  /// <param name="logger">The logger used for logging service operations.</param>
+  /// <param name="server">The server instance that owns this service.</param>
+  /// <exception cref="ArgumentNullException">Thrown when <paramref name="logger"/> or <paramref name="server"/> is null.</exception>
+  public class HLSServerListService(ILogger<HLSServerListService> logger, CoveServer server) : IHostedService, IDisposable
     {
-        private readonly ILogger<HLSServerListService> _logger;
-        private Timer _timer;
-        private CoveServer server;
+        private readonly ILogger<HLSServerListService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        private readonly CoveServer _server = server ?? throw new ArgumentNullException(nameof(server));
+        private Timer? _timer;
+        private const string Endpoint = "https://hooklinesinker.lol/servers";
 
-        public HLSServerListService(ILogger<HLSServerListService> logger, CoveServer server)
-        {
-            _logger = logger;
-            this.server = server;
-        }
-
-        // This method is called when the service is starting.
-        // the timeout for servers is 3 minutes, so we are going to send a heartbeat every 2.45 minutes
-        public Task StartAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Starts the <see cref="HLSServerListService"/> and initializes the periodic timer.
+    /// </summary>
+    /// <param name="cancellationToken">A token that signals when the service should stop.</param>
+    /// <returns>A completed <see cref="Task"/> indicating the service has started.</returns>
+    public Task StartAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("HLSServerListService is starting.");
-
-            // Setup a timer to trigger the task periodically.
-            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMinutes(2) + TimeSpan.FromSeconds(45));
-
+            _timer = new Timer(DoWorkAsync, null, TimeSpan.Zero, TimeSpan.FromMinutes(2).Add(TimeSpan.FromSeconds(45)));
             return Task.CompletedTask;
         }
 
-        // This is the method that will be triggered periodically by the timer.
-        private void DoWork(object state)
+        /// <summary>
+        /// Sends periodic heartbeats to the HLS server list endpoint.
+        /// </summary>
+        /// <param name="state">Optional state parameter, unused in this implementation.</param>
+        private async void DoWorkAsync(object? state)
         {
             _logger.LogInformation("HLSServerListService is working.");
 
-            string endpoint = $"https://hooklinesinker.lol/servers"; // api endpoint for HLS server list
-            using (HttpClient client = new HttpClient())
+            try
             {
-                var requestBody = new RequestBody
-                {
-                    host = Steamworks.SteamClient.Name,
-                    lobby_code = server.LobbyCode,
-                    version = server.WebFishingGameVersion,
-                    lobby_type = server.codeOnly ? "Code Only" : "Public",
-                    player_cap = server.MaxPlayers,
-                    age_restricted = server.ageRestricted,
-                    map = "default", // make this changeable later (will add map id to server config)
-                    title = server.ServerName,
-                    mods = new string[] { }, // again make this changeable later
-                    country = Steamworks.SteamUtils.IpCountry,
-                    current_players = server.AllPlayers.Count,
-                };
+                var requestBody = CreateRequestBody();
+                var jsonBody = JsonSerializer.Serialize(requestBody, new JsonSerializerOptions { WriteIndented = false });
 
-                JsonSerializerOptions options = new JsonSerializerOptions
-                {
-                    TypeInfoResolver = new DefaultJsonTypeInfoResolver()
-                };
+                using var client = new HttpClient();
+                using var content = new StringContent(jsonBody, System.Text.Encoding.UTF8, "application/json");
 
-                string jsonBody = JsonSerializer.Serialize(requestBody, options);
-                HttpContent content = new StringContent(jsonBody, System.Text.Encoding.UTF8, "application/json");
-
-                // send a heartbeat to the HLS server list
-                HttpResponseMessage response = client.PostAsync(endpoint, content).Result;
+                var response = await client.PostAsync(Endpoint, content);
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation("Heartbeat sent to HLS server list.");
+                    _logger.LogInformation("Heartbeat sent to HLS server list successfully.");
                 }
                 else
                 {
-                    _logger.LogError("Failed to send heartbeat to HLS server list.");
-                    _logger.LogError(response.Content.ReadAsStringAsync().Result);
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Failed to send heartbeat to HLS server list. Status Code: {StatusCode}", response.StatusCode);
+                    _logger.LogError("Response: {ErrorContent}", errorContent);
                 }
             }
-
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while sending a heartbeat to the HLS server list.");
+            }
         }
 
-        // This method is called when the service is stopping.
+        /// <summary>
+        /// Creates the request body for the HLS server list heartbeat.
+        /// </summary>
+        /// <returns>A populated <see cref="RequestBody"/> instance.</returns>
+        private RequestBody CreateRequestBody()
+        {
+            return new RequestBody
+            {
+                Host = Steamworks.SteamClient.Name,
+                LobbyCode = _server.LobbyCode,
+                Version = _server.WebFishingGameVersion,
+                LobbyType = _server.CodeOnly ? "Code Only" : "Public",
+                PlayerCap = _server.MaxPlayers,
+                AgeRestricted = _server.AgeRestricted,
+                Map = "default", // Placeholder, make configurable in the future
+                Title = _server.ServerName,
+                Mods = Array.Empty<string>(), // Placeholder, make configurable in the future
+                Country = Steamworks.SteamUtils.IpCountry,
+                CurrentPlayers = _server.AllPlayers.Count
+            };
+        }
+
+        /// <summary>
+        /// Stops the <see cref="HLSServerListService"/> and cancels the periodic timer.
+        /// </summary>
+        /// <param name="cancellationToken">A token that signals when the service should stop.</param>
+        /// <returns>A completed <see cref="Task"/> indicating the service has stopped.</returns>
         public Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("HLSServerListService is stopping.");
-
-            // Stop the timer and dispose of it.
             _timer?.Change(Timeout.Infinite, 0);
-
             return Task.CompletedTask;
         }
 
-        // This method is called to dispose of the resources.
+        /// <summary>
+        /// Disposes of the resources used by the <see cref="HLSServerListService"/>, including the timer.
+        /// </summary>
         public void Dispose()
         {
             _timer?.Dispose();
         }
     }
-
 }

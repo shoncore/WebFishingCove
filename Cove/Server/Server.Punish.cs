@@ -1,59 +1,98 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Cove.Server.Actor;
-using Steamworks;
+﻿using Steamworks;
 
 namespace Cove.Server
 {
     public partial class CoveServer
     {
+        private const string BansFileName = "bans.txt";
 
-        public void banPlayer(SteamId id, bool saveToFile = false)
+        /// <summary>
+        /// Bans a player from the server and optionally saves the ban to a file.
+        /// </summary>
+        /// <param name="id">The SteamId of the player to ban.</param>
+        /// <param name="saveToFile">Whether to save the ban to the bans file.</param>
+        public void BanPlayer(SteamId id, bool saveToFile = false)
         {
-            Dictionary<string, object> banPacket = new();
-            banPacket["type"] = "ban";
+            var banPacket = new Dictionary<string, object>
+            {
+                { "type", "ban" }
+            };
 
-            sendPacketToPlayer(banPacket, id);
+            SendPacketToPlayer(banPacket, id);
 
             if (saveToFile)
-                writeToBansFile(id);
-
-            sendBlacklistPacketToAll(id.Value.ToString());
-        }
-
-        public bool isPlayerBanned(SteamId id)
-        {
-            string fileDir = $"{AppDomain.CurrentDomain.BaseDirectory}bans.txt";
-
-            string[] fileContent = File.ReadAllLines(fileDir);
-            foreach (string line in fileContent)
             {
-                if (line.Contains(id.Value.ToString()))
-                {
-                    return true;
-                }
+                WriteToBansFile(id);
             }
 
-            return false;
+            SendBlacklistPacketToAll(id.Value.ToString());
         }
 
-        private void writeToBansFile(SteamId id)
+        /// <summary>
+        /// Checks if a player is banned based on their SteamId.
+        /// </summary>
+        /// <param name="id">The SteamId of the player to check.</param>
+        /// <returns>True if the player is banned; otherwise, false.</returns>
+        public bool IsPlayerBanned(SteamId id)
         {
-            string fileDir = $"{AppDomain.CurrentDomain.BaseDirectory}bans.txt";
-            WFPlayer player = AllPlayers.Find(p => p.SteamId == id);
-            File.WriteAllText(fileDir, $"\n{id.Value} #{player.FisherName}");
+            string filePath = GetBansFilePath();
+
+            if (!File.Exists(filePath))
+            {
+                return false;
+            }
+
+            var fileContent = File.ReadLines(filePath);
+            return fileContent.Any(line => line.Contains(id.Value.ToString()));
         }
 
-        public void kickPlayer(SteamId id)
+        /// <summary>
+        /// Writes a player's SteamId and name to the bans file.
+        /// </summary>
+        /// <param name="id">The SteamId of the player to write.</param>
+        private void WriteToBansFile(SteamId id)
         {
-            Dictionary<string, object> kickPacket = new();
-            kickPacket["type"] = "kick";
+            string filePath = GetBansFilePath();
 
-            sendPacketToPlayer(kickPacket, id);
+            var player = AllPlayers.Find(p => p.SteamId == id);
+            if (player == null)
+            {
+                Console.WriteLine($"Cannot find player with SteamId {id.Value} to write to bans file.");
+                return;
+            }
+
+            try
+            {
+                File.AppendAllText(filePath, $"\n{id.Value} #{player.FisherName}");
+                Console.WriteLine($"Added {id.Value} ({player.FisherName}) to bans file.");
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine($"Failed to write to bans file: {ex.Message}");
+            }
         }
 
+        /// <summary>
+        /// Kicks a player from the server.
+        /// </summary>
+        /// <param name="id">The SteamId of the player to kick.</param>
+        public static void KickPlayer(SteamId id)
+        {
+            var kickPacket = new Dictionary<string, object>
+            {
+                { "type", "kick" }
+            };
+
+            SendPacketToPlayer(kickPacket, id);
+        }
+
+        /// <summary>
+        /// Retrieves the full file path to the bans file.
+        /// </summary>
+        /// <returns>The bans file path.</returns>
+        private static string GetBansFilePath()
+        {
+            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, BansFileName);
+        }
     }
 }
