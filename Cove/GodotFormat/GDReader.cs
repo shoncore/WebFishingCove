@@ -1,26 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using Cove.GodotFormat;
+﻿using System.Text;
 
 namespace Cove.GodotFormat
 {
   /// <summary>
   /// A utility class for reading Godot's serialized data format.
   /// </summary>
-  public class GodotReader
+  /// <remarks>
+  /// Initializes a new instance of the <see cref="GodotReader"/> class.
+  /// </remarks>
+  /// <param name="data">The binary data to read.</param>
+  public class GodotReader(byte[] data)
   {
-    private readonly BinaryReader _reader;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="GodotReader"/> class.
-    /// </summary>
-    /// <param name="data">The binary data to read.</param>
-    public GodotReader(byte[] data)
-    {
-      _reader = new BinaryReader(new MemoryStream(data), Encoding.UTF8);
-    }
+    private readonly BinaryReader _reader = new(new MemoryStream(data), Encoding.UTF8);
 
     /// <summary>
     /// Reads a Godot packet and returns it as a dictionary.
@@ -31,10 +22,10 @@ namespace Cove.GodotFormat
       try
       {
         int type = _reader.ReadInt32();
-        if (type != (int)GodotTypes.DictionaryValue)
-        {
-          throw new InvalidOperationException("The data is not a dictionary.");
-        }
+        // if (type != (int)GodotTypes.DictionaryValue)
+        // {
+        //   throw new InvalidOperationException("The data is not a dictionary.");
+        // }
 
         return ReadDictionary();
       }

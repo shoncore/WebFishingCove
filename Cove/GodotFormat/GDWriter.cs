@@ -27,43 +27,47 @@ namespace Cove.GodotFormat
     /// Writes any supported type to the binary writer.
     /// </summary>
     private static void WriteAny(object? value, BinaryWriter writer)
+{
+    switch (value)
     {
-      switch (value)
-      {
         case null:
-          writer.Write(0);
-          break;
+            writer.Write(0);
+            break;
         case Dictionary<string, object> dict:
-          WriteDictionary(dict, writer);
-          break;
+            WriteDictionary(dict, writer);
+            break;
         case string str:
-          WriteString(str, writer);
-          break;
+            WriteString(str, writer);
+            break;
         case int i:
-          WriteInt(i, writer);
-          break;
+            WriteInt(i, writer);
+            break;
         case long l:
-          WriteLong(l, writer);
-          break;
+            WriteLong(l, writer);
+            break;
+        case ulong ul:
+            WriteULong(ul, writer);
+            break;
         case float f:
-          WriteSingle(f, writer);
-          break;
+            WriteSingle(f, writer);
+            break;
         case double d:
-          WriteDouble(d, writer);
-          break;
+            WriteDouble(d, writer);
+            break;
         case bool b:
-          WriteBool(b, writer);
-          break;
+            WriteBool(b, writer);
+            break;
         case Dictionary<int, object> array:
-          WriteArray(array, writer);
-          break;
+            WriteArray(array, writer);
+            break;
         case Vector3 vector3:
-          WriteVector3(vector3, writer);
-          break;
+            WriteVector3(vector3, writer);
+            break;
         default:
-          throw new InvalidOperationException($"Unsupported value type: {value.GetType().Name}");
-      }
+            throw new InvalidOperationException($"Unsupported value type: {value.GetType().Name}");
     }
+}
+
 
     private static void WriteVector3(Vector3 vector, BinaryWriter writer)
     {
@@ -90,6 +94,13 @@ namespace Cove.GodotFormat
       writer.Write((int)65538); // Int64 header
       writer.Write(value);
     }
+
+    private static void WriteULong(ulong value, BinaryWriter writer)
+    {
+        writer.Write((int)65540);
+        writer.Write(value);
+    }
+
 
     private static void WriteSingle(float value, BinaryWriter writer)
     {
