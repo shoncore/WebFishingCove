@@ -55,18 +55,18 @@
             var player = AllPlayers.Find(p => p.SteamId == id);
             if (player == null)
             {
-                Console.WriteLine($"Cannot find player with SteamId {id.Value} to write to bans file.");
+                Logger.LogWarning("Cannot find player with SteamId {SteamId} to write to bans file.", id.Value);
                 return;
             }
 
             try
             {
                 File.AppendAllText(filePath, $"\n{id.Value} #{player.FisherName}");
-                Console.WriteLine($"Added {id.Value} ({player.FisherName}) to bans file.");
+                Logger.LogInformation("Added {FisherName} [{SteamId}] to bans file.", player.FisherName, player.SteamId);
             }
             catch (IOException ex)
             {
-                Console.WriteLine($"Failed to write to bans file: {ex.Message}");
+                Logger.LogError(ex, "Failed to write to bans file");
             }
         }
 

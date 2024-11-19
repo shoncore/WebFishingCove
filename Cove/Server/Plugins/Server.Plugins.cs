@@ -1,147 +1,151 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Threading;
-using Cove.Server.Plugins;
-using Cove.Server.Utils;
+﻿using System.Reflection;
 
 namespace Cove.Server
 {
-  public partial class CoveServer
-  {
-    public readonly bool PluginsEnabled = false;
-
-    public readonly List<PluginInstance> LoadedPlugins = [];
-
-    /// <summary>
-    /// Loads all plugins from the plugins directory.
-    /// </summary>
-    protected void LoadAllPlugins()
+    public partial class CoveServer
     {
-      if (!PluginsEnabled)
-        return;
+        public readonly bool PluginsEnabled = false;
 
-      Console.WriteLine("\n------------ WARNING ------------");
-      Console.WriteLine("YOU HAVE ENABLED PLUGINS. PLUGINS RUN CODE THAT IS NOT APPROVED OR MADE BY COVE.");
-      Console.WriteLine("ANY AND ALL DAMAGE TO YOUR COMPUTER IS YOUR FAULT ALONE.");
-      Console.WriteLine("DO NOT RUN ANY UNTRUSTED PLUGINS!");
-      Console.WriteLine("IF YOU ARE RUNNING UNTRUSTED PLUGINS, EXIT COVE NOW.");
-      Console.WriteLine("------------ WARNING ------------\n");
+        public readonly List<PluginInstance> LoadedPlugins = [];
 
-      Thread.Sleep(5000);
-
-      Console.WriteLine("Loading Plugins...");
-
-      string pluginsFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plugins");
-
-      if (!Directory.Exists(pluginsFolder))
-      {
-        Console.WriteLine($"Plugins folder not found at {pluginsFolder}");
-        return;
-      }
-
-      var pluginAssemblies = new List<Assembly>();
-
-      // Get all files in the plugins folder
-      foreach (string fileName in Directory.GetFiles(pluginsFolder, "*.dll"))
-      {
-        try
+        /// <summary>
+        /// Loads all plugins from the plugins directory.
+        /// </summary>
+        protected void LoadAllPlugins()
         {
-          // Load the assembly
-          var assembly = Assembly.LoadFrom(fileName);
-          pluginAssemblies.Add(assembly);
-        }
-        catch (BadImageFormatException)
-        {
-          Console.WriteLine($"File '{fileName}' is not a valid plugin!");
-        }
-        catch (Exception ex)
-        {
-          Console.WriteLine($"Failed to load '{fileName}': {ex.Message}");
-        }
-      }
+            if (!PluginsEnabled)
+                return;
 
-      Console.WriteLine($"Found {pluginAssemblies.Count} plugin(s)!");
+            Logger.LogInformation(
+                """
+------------ WARNING ------------
+YOU HAVE ENABLED PLUGINS. PLUGINS RUN CODE THAT IS NOT APPROVED OR MADE BY COVE.
+ANY AND ALL DAMAGE TO YOUR COMPUTER IS YOUR FAULT ALONE.
+DO NOT RUN ANY UNTRUSTED PLUGINS!
+IF YOU ARE RUNNING UNTRUSTED PLUGINS, EXIT COVE NOW.
+------------ WARNING ------------
+"""
+            );
 
-      foreach (var assembly in pluginAssemblies)
-      {
-        // Get all types in the assembly
-        Type[] types;
-        try
-        {
-          types = assembly.GetTypes();
-        }
-        catch (ReflectionTypeLoadException ex)
-        {
-          Console.WriteLine($"Failed to load types from '{assembly.FullName}': {ex.Message}");
-          continue;
-        }
+            Thread.Sleep(5000);
 
-        // Iterate over each type and check if it inherits from CovePlugin
-        foreach (var type in types)
-        {
-          if (type.IsClass && !type.IsAbstract && type.IsSubclassOf(typeof(CovePlugin)))
-          {
-            try
+            Logger.LogInformation("Loading Plugins...");
+
+            string pluginsFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plugins");
+
+            if (!Directory.Exists(pluginsFolder))
             {
-              // Create an instance of the plugin
-              var instance = Activator.CreateInstance(type, this) as CovePlugin;
-              if (instance != null)
-              {
-                // Read plugin configuration
-                string pluginConfig = ReadConfigFromPlugin($"{assembly.GetName().Name}.plugin.cfg", assembly);
-                var config = ConfigReader.ReadConfig(pluginConfig);
-
-                if (config.TryGetValue("name", out var name) &&
-                    config.TryGetValue("id", out var id) &&
-                    config.TryGetValue("author", out var author))
-                {
-                  var pluginInstance = new PluginInstance(instance, name, id, author);
-                  LoadedPlugins.Add(pluginInstance);
-                  Console.WriteLine($"Plugin Init: {name}");
-
-                  // Initialize the plugin
-                  instance.OnInit();
-                }
-                else
-                {
-                  Console.WriteLine($"Plugin '{assembly.GetName().Name}' missing required config entries.");
-                }
-              }
-              else
-              {
-                Console.WriteLine($"Unable to create instance of plugin '{type.FullName}'.");
-              }
+                Logger.LogInformation("Plugins folder not found at {Folder}", pluginsFolder);
+                return;
             }
-            catch (Exception ex)
+
+            var pluginAssemblies = new List<Assembly>();
+
+            foreach (string fileName in Directory.GetFiles(pluginsFolder, "*.dll"))
             {
-              Console.WriteLine($"Error loading plugin '{type.FullName}': {ex.Message}");
+                try
+                {
+                    var assembly = Assembly.LoadFrom(fileName);
+                    pluginAssemblies.Add(assembly);
+                }
+                catch (BadImageFormatException)
+                {
+                    Logger.LogError("File {File} is not a valid plugin!", fileName);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Failed to load plugin.");
+                }
             }
-          }
-        }
-      }
-    }
 
-    /// <summary>
-    /// Reads the configuration file embedded in the plugin assembly.
-    /// </summary>
-    /// <param name="fileIdentifier">The name of the embedded config file.</param>
-    /// <param name="assembly">The plugin assembly.</param>
-    /// <returns>The contents of the configuration file as a string.</returns>
-    /// <exception cref="FileNotFoundException">Thrown if the config file is not found in the assembly.</exception>
-    private static string ReadConfigFromPlugin(string fileIdentifier, Assembly assembly)
-    {
-      using Stream? fileStream = assembly.GetManifestResourceStream(fileIdentifier);
-      if (fileStream != null)
-      {
-        using var reader = new StreamReader(fileStream);
-        return reader.ReadToEnd();
-      }
-      else
-      {
-        throw new FileNotFoundException($"Plugin '{assembly.GetName().Name}' doesn't have a '{fileIdentifier}' file!");
-      }
+            Logger.LogInformation("Found {Count} plugin(s)!", pluginAssemblies.Count);
+
+            foreach (var assembly in pluginAssemblies)
+            {
+                Type[] types;
+                try
+                {
+                    types = assembly.GetTypes();
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    Logger.LogError(ex, "Failed to load types from {Assembly}", assembly.FullName);
+                    continue;
+                }
+
+                foreach (var type in types)
+                {
+                    if (type.IsClass && !type.IsAbstract && type.IsSubclassOf(typeof(CovePlugin)))
+                    {
+                        try
+                        {
+                            if (Activator.CreateInstance(type, this) is CovePlugin instance)
+                            {
+                                string pluginConfig = ReadConfigFromPlugin(
+                                    $"{assembly.GetName().Name}.plugin.cfg",
+                                    assembly
+                                );
+                                var configReader = new ConfigReader(LoggerFactory.CreateLogger<ConfigReader>());
+                                var config = configReader.ReadConfig(pluginConfig);
+
+                                if (
+                                    config.TryGetValue("name", out var name)
+                                    && config.TryGetValue("id", out var id)
+                                    && config.TryGetValue("author", out var author)
+                                )
+                                {
+                                    var pluginInstance = new PluginInstance(
+                                        instance,
+                                        name,
+                                        id,
+                                        author
+                                    );
+                                    LoadedPlugins.Add(pluginInstance);
+                                    Logger.LogInformation("Plugin Initialized: {Plugin}", name);
+
+                                    // Initialize the plugin
+                                    instance.OnInit();
+                                }
+                                else
+                                {
+                                    Logger.LogWarning("Plugin '{Plugin}' missing required config entries.", assembly.GetName().Name);
+                                }
+                            }
+                            else
+                            {
+                                Logger.LogWarning("Unable to create instance of plugin {Type}", type.FullName);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError(ex, "Error loading plugin {Type}", type.FullName);
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Reads the configuration file embedded in the plugin assembly.
+        /// </summary>
+        /// <param name="fileIdentifier">The name of the embedded config file.</param>
+        /// <param name="assembly">The plugin assembly.</param>
+        /// <returns>The contents of the configuration file as a string.</returns>
+        /// <exception cref="FileNotFoundException">Thrown if the config file is not found in the assembly.</exception>
+        private static string ReadConfigFromPlugin(string fileIdentifier, Assembly assembly)
+        {
+            using Stream? fileStream = assembly.GetManifestResourceStream(fileIdentifier);
+            if (fileStream != null)
+            {
+                using var reader = new StreamReader(fileStream);
+                return reader.ReadToEnd();
+            }
+            else
+            {
+                throw new FileNotFoundException(
+                    $"Plugin '{assembly.GetName().Name}' doesn't have a '{fileIdentifier}' file!"
+                );
+            }
+        }
     }
-  }
 }

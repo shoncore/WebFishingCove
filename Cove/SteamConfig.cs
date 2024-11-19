@@ -1,4 +1,7 @@
-public static class SteamConfig
+namespace Cove
 {
-  public const int AppId = 3146520;
+    public static class SteamConfig
+    {
+        public const int AppId = 3146520;
+    }
 }
