@@ -61,12 +61,12 @@ while (true)
 
         if (ulong.TryParse(identifier, out ulong steamIdValue))
         {
-            SteamId steamId = new() { Value = steamIdValue };
-            player = webfishingServer.AllPlayers.Find(p => p.SteamId == steamId);
+          SteamId steamId = new() { Value = steamIdValue };
+          player = webfishingServer.AllPlayers.Find(p => p.SteamId == steamId);
         }
         else
         {
-            player = webfishingServer.AllPlayers.Find(p => p.FisherName.Equals(identifier, StringComparison.OrdinalIgnoreCase));
+          player = webfishingServer.AllPlayers.Find(p => p.FisherName.Equals(identifier, StringComparison.OrdinalIgnoreCase));
         }
 
         if (player != null)
@@ -93,39 +93,39 @@ while (true)
       break;
 
     case "kick":
-    if (args.Length > 1)
-    {
+      if (args.Length > 1)
+      {
         string identifier = args[1];
         WFPlayer? player = null;
 
         // Attempt to parse the identifier as a Steam ID (ulong)
         if (ulong.TryParse(identifier, out ulong steamIdValue))
         {
-            // Identifier is a Steam ID
-            SteamId steamId = new() { Value = steamIdValue };
-            player = webfishingServer.AllPlayers.Find(p => p.SteamId == steamId);
+          // Identifier is a Steam ID
+          SteamId steamId = new() { Value = steamIdValue };
+          player = webfishingServer.AllPlayers.Find(p => p.SteamId == steamId);
         }
         else
         {
-            // Identifier is a player name
-            player = webfishingServer.AllPlayers.Find(p => p.FisherName.Equals(identifier, StringComparison.OrdinalIgnoreCase));
+          // Identifier is a player name
+          player = webfishingServer.AllPlayers.Find(p => p.FisherName.Equals(identifier, StringComparison.OrdinalIgnoreCase));
         }
 
         if (player != null)
         {
-            CoveServer.KickPlayer(player.SteamId);
-            logger.LogInformation("Kicked player {Username}, [{SteamId}]", player.FisherName, player.SteamId);
+          CoveServer.KickPlayer(player.SteamId);
+          logger.LogInformation("Kicked player {Username}, [{SteamId}]", player.FisherName, player.SteamId);
         }
         else
         {
-            logger.LogWarning("Player with identifier '{Identifier}' not found!", identifier);
+          logger.LogWarning("Player with identifier '{Identifier}' not found!", identifier);
         }
-    }
-    else
-    {
+      }
+      else
+      {
         logger.LogInformation("Usage: kick <player name or Steam ID>");
-    }
-    break;
+      }
+      break;
 
 
     case "players":

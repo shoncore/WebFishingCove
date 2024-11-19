@@ -1,6 +1,4 @@
-﻿using Steamworks;
-
-namespace Cove.Server
+﻿namespace Cove.Server
 {
     public partial class CoveServer
     {

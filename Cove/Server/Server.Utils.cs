@@ -1,13 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Steamworks;
-using Cove.Server.Plugins;
-using Cove.GodotFormat;
-using Cove.Server.Actor;
-using Cove.Server.Utils;
-
-namespace Cove.Server
+﻿namespace Cove.Server
 {
   public partial class CoveServer
   {
@@ -67,12 +58,12 @@ namespace Cove.Server
     /// <summary>
     /// Spawns a fish of the specified type at a random position.
     /// </summary>
-    public WFActor SpawnFish(string fishType = "fish_spawn")
+    public WFActor? SpawnFish(string fishType = "fish_spawn")
     {
       var rand = new Random();
       if (FishPoints == null || FishPoints.Count == 0)
       {
-        throw new InvalidOperationException("FishPoints is null or empty.");
+        return null;
       }
       var position = FishPoints[rand.Next(FishPoints.Count)] + new Vector3(0, 0.08f, 0);
       var actor = SpawnGenericActor(fishType, position);
@@ -102,22 +93,22 @@ namespace Cove.Server
       return actor;
     }
 
-  /// <summary>
-  /// Spawns a metal object at a random position.
-  /// </summary>
-  public WFActor SpawnMetal()
-  {
+    /// <summary>
+    /// Spawns a metal object at a random position.
+    /// </summary>
+    public WFActor SpawnMetal()
+    {
       var rand = new Random();
       List<Vector3> points;
 
       // Decide whether to use ShorelinePoints or TrashPoints
       if (rand.NextDouble() < 0.15)
       {
-          points = ShorelinePoints ?? [];
+        points = ShorelinePoints ?? [];
       }
       else
       {
-          points = TrashPoints ?? [];
+        points = TrashPoints ?? [];
       }
 
       // Get a random position from the selected list
@@ -128,21 +119,21 @@ namespace Cove.Server
       actor.ShouldDespawn = false; // Metal never despawns
 
       return actor;
-  }
+    }
 
-  // Helper method to get a random position from a list
-  private static Vector3 GetRandomPosition(List<Vector3> points, Random rand)
-  {
+    // Helper method to get a random position from a list
+    private static Vector3 GetRandomPosition(List<Vector3> points, Random rand)
+    {
       if (points != null && points.Count > 0)
       {
-          int index = rand.Next(points.Count);
-          return points[index];
+        int index = rand.Next(points.Count);
+        return points[index];
       }
       else
       {
-          return Vector3.Zero;
+        return Vector3.Zero;
       }
-  }
+    }
 
 
     /// <summary>

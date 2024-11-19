@@ -42,7 +42,7 @@ namespace Cove.GodotFormat
       {
         Console.WriteLine("Error reading packet:");
         Console.WriteLine(ex);
-        return new Dictionary<string, object>();
+        return [];
       }
     }
 
@@ -54,18 +54,18 @@ namespace Cove.GodotFormat
 
       return type switch
       {
-          (int)GodotTypes.NullValue => null!,
-          (int)GodotTypes.DictionaryValue => ReadDictionary(),
-          (int)GodotTypes.ArrayValue => ReadArray(),
-          (int)GodotTypes.StringValue => ReadString(),
-          (int)GodotTypes.IntValue => ReadInt(flags),
-          (int)GodotTypes.Vector3Value => ReadVector3(),
-          (int)GodotTypes.QuatValue => ReadQuat(),
-          (int)GodotTypes.BoolValue => ReadBool(),
-          (int)GodotTypes.FloatValue => ReadFloat(flags),
-          (int)GodotTypes.PlaneValue => ReadPlane(),
-          (int)GodotTypes.Vector2Value => ReadVector2(),
-          _ => new ReadError($"Unsupported object type: {type}")
+        (int)GodotTypes.NullValue => null!,
+        (int)GodotTypes.DictionaryValue => ReadDictionary(),
+        (int)GodotTypes.ArrayValue => ReadArray(),
+        (int)GodotTypes.StringValue => ReadString(),
+        (int)GodotTypes.IntValue => ReadInt(flags),
+        (int)GodotTypes.Vector3Value => ReadVector3(),
+        (int)GodotTypes.QuatValue => ReadQuat(),
+        (int)GodotTypes.BoolValue => ReadBool(),
+        (int)GodotTypes.FloatValue => ReadFloat(flags),
+        (int)GodotTypes.PlaneValue => ReadPlane(),
+        (int)GodotTypes.Vector2Value => ReadVector2(),
+        _ => new ReadError($"Unsupported object type: {type}")
       };
     }
 

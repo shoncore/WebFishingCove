@@ -1,14 +1,4 @@
-﻿using System.Collections.Concurrent;
-using Steamworks;
-using Steamworks.Data;
-using Cove.GodotFormat;
-using Cove.Server.Actor;
-using Cove.Server.HostedServices;
-using Cove.Server.Utils;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
-namespace Cove.Server
+﻿namespace Cove.Server
 {
   /// <summary>
   /// Represents the Cove Server.
@@ -29,7 +19,7 @@ namespace Cove.Server
     /// <summary>
     /// Gets the maximum number of players allowed in the server.
     /// </summary>
-    public int MaxPlayers { get; private set; } = 20;
+    public int MaxPlayers { get; private set; } = 24;
 
     /// <summary>
     /// Gets the name of the server.
@@ -79,7 +69,7 @@ namespace Cove.Server
     /// <summary>
     /// Gets the list of admin Steam IDs.
     /// </summary>
-    public List<string> Admins { get; private set; } = new();
+    public List<string> Admins { get; private set; } = [];
 
     /// <summary>
     /// Gets the game lobby.
@@ -89,17 +79,17 @@ namespace Cove.Server
     /// <summary>
     /// Gets the list of all players connected to the server.
     /// </summary>
-    public List<WFPlayer> AllPlayers { get; private set; } = new();
+    public List<WFPlayer> AllPlayers { get; private set; } = [];
 
     /// <summary>
     /// Gets the list of server-owned actor instances.
     /// </summary>
-    public List<WFActor> ServerOwnedInstances { get; private set; } = new();
+    public List<WFActor> ServerOwnedInstances { get; private set; } = [];
 
     /// <summary>
     /// Gets or sets the queue for incoming network packets.
     /// </summary>
-    private ConcurrentQueue<P2Packet> PacketQueue { get; set; } = new();
+    private ConcurrentQueue<P2Packet> PacketQueue { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the list of fish spawn points.
@@ -124,7 +114,7 @@ namespace Cove.Server
     /// <summary>
     /// Gets or sets the dictionary of hosted services.
     /// </summary>
-    private Dictionary<string, IHostedService> Services { get; set; } = new();
+    private Dictionary<string, IHostedService> Services { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the logger instance for the server.
@@ -364,7 +354,7 @@ namespace Cove.Server
       while (true)
       {
         SteamClient.RunCallbacks();
-        await Task.Delay(16); // Prevent tight CPU loop
+        await Task.Delay(16);
       }
     }
 

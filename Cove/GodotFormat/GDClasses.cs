@@ -2,35 +2,35 @@
 
 namespace Cove.GodotFormat
 {
-    /// <summary>
-    /// Represents a 3D vector with x, y, and z components.
-    /// </summary>
-    public class Vector3
+  /// <summary>
+  /// Represents a 3D vector with x, y, and z components.
+  /// </summary>
+  public class Vector3
+  {
+    public float X { get; }
+    public float Y { get; }
+    public float Z { get; }
+
+    public static readonly Vector3 Zero = new(0, 0, 0);
+
+    public Vector3(float x, float y, float z)
     {
-        public float X { get; }
-        public float Y { get; }
-        public float Z { get; }
+      X = x;
+      Y = y;
+      Z = z;
+    }
 
-        public static readonly Vector3 Zero = new(0, 0, 0);
+    public static Vector3 operator +(Vector3 a, Vector3 b) => new(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
 
-        public Vector3(float x, float y, float z)
-        {
-            X = x;
-            Y = y;
-            Z = z;
-        }
+    public static Vector3 operator -(Vector3 a, Vector3 b) => new(a.X - b.X, a.Y - b.Y, a.Z - b.Z);
 
-        public static Vector3 operator +(Vector3 a, Vector3 b) => new(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
+    public static Vector3 operator *(Vector3 a, float scalar) => new(a.X * scalar, a.Y * scalar, a.Z * scalar);
 
-        public static Vector3 operator -(Vector3 a, Vector3 b) => new(a.X - b.X, a.Y - b.Y, a.Z - b.Z);
-
-        public static Vector3 operator *(Vector3 a, float scalar) => new(a.X * scalar, a.Y * scalar, a.Z * scalar);
-
-        public static Vector3 operator /(Vector3 a, float scalar)
-        {
-            if (scalar == 0) throw new DivideByZeroException("Cannot divide by zero.");
-            return new Vector3(a.X / scalar, a.Y / scalar, a.Z / scalar);
-        }
+    public static Vector3 operator /(Vector3 a, float scalar)
+    {
+      if (scalar == 0) throw new DivideByZeroException("Cannot divide by zero.");
+      return new Vector3(a.X / scalar, a.Y / scalar, a.Z / scalar);
+    }
 
     public static float Dot(Vector3 a, Vector3 b)
     {
@@ -52,11 +52,11 @@ namespace Cove.GodotFormat
     }
 
     public Vector3 Normalize()
-        {
-            float magnitude = Magnitude();
-            if (magnitude == 0) throw new InvalidOperationException("Cannot normalize a zero vector.");
-            return this / magnitude;
-        }
+    {
+      float magnitude = Magnitude();
+      if (magnitude == 0) throw new InvalidOperationException("Cannot normalize a zero vector.");
+      return this / magnitude;
+    }
 
     public override string ToString()
     {
@@ -64,21 +64,21 @@ namespace Cove.GodotFormat
     }
   }
 
-    /// <summary>
-    /// Represents a 2D vector with x and y components.
-    /// </summary>
-    public class Vector2
+  /// <summary>
+  /// Represents a 2D vector with x and y components.
+  /// </summary>
+  public class Vector2
+  {
+    public float X { get; }
+    public float Y { get; }
+
+    public static readonly Vector2 Zero = new(0, 0);
+
+    public Vector2(float x, float y)
     {
-        public float X { get; }
-        public float Y { get; }
-
-        public static readonly Vector2 Zero = new(0, 0);
-
-        public Vector2(float x, float y)
-        {
-            X = x;
-            Y = y;
-        }
+      X = x;
+      Y = y;
+    }
 
     public float Magnitude()
     {
@@ -86,11 +86,11 @@ namespace Cove.GodotFormat
     }
 
     public Vector2 Normalize()
-        {
-            float magnitude = Magnitude();
-            if (magnitude == 0) throw new InvalidOperationException("Cannot normalize a zero vector.");
-            return new Vector2(X / magnitude, Y / magnitude);
-        }
+    {
+      float magnitude = Magnitude();
+      if (magnitude == 0) throw new InvalidOperationException("Cannot normalize a zero vector.");
+      return new Vector2(X / magnitude, Y / magnitude);
+    }
 
     public float Angle()
     {
@@ -103,14 +103,14 @@ namespace Cove.GodotFormat
     }
 
     public Vector2 Rotate(float angleRadians)
-        {
-            float cosTheta = (float)Math.Cos(angleRadians);
-            float sinTheta = (float)Math.Sin(angleRadians);
-            return new Vector2(
-                X * cosTheta - Y * sinTheta,
-                X * sinTheta + Y * cosTheta
-            );
-        }
+    {
+      float cosTheta = (float)Math.Cos(angleRadians);
+      float sinTheta = (float)Math.Sin(angleRadians);
+      return new Vector2(
+          X * cosTheta - Y * sinTheta,
+          X * sinTheta + Y * cosTheta
+      );
+    }
 
     public Vector2 RotateInDegrees(float angleDegrees)
     {
@@ -125,23 +125,23 @@ namespace Cove.GodotFormat
     }
   }
 
-    /// <summary>
-    /// Represents a quaternion for 3D rotations.
-    /// </summary>
-    public class Quat
-    {
-        public float X { get; }
-        public float Y { get; }
-        public float Z { get; }
-        public float W { get; }
+  /// <summary>
+  /// Represents a quaternion for 3D rotations.
+  /// </summary>
+  public class Quat
+  {
+    public float X { get; }
+    public float Y { get; }
+    public float Z { get; }
+    public float W { get; }
 
-        public Quat(float x, float y, float z, float w)
-        {
-            X = x;
-            Y = y;
-            Z = z;
-            W = w;
-        }
+    public Quat(float x, float y, float z, float w)
+    {
+      X = x;
+      Y = y;
+      Z = z;
+      W = w;
+    }
 
     public override string ToString()
     {
@@ -149,23 +149,23 @@ namespace Cove.GodotFormat
     }
   }
 
-    /// <summary>
-    /// Represents a 3D plane in space.
-    /// </summary>
-    public class Plane
-    {
-        public float X { get; }
-        public float Y { get; }
-        public float Z { get; }
-        public float Distance { get; }
+  /// <summary>
+  /// Represents a 3D plane in space.
+  /// </summary>
+  public class Plane
+  {
+    public float X { get; }
+    public float Y { get; }
+    public float Z { get; }
+    public float Distance { get; }
 
-        public Plane(float x, float y, float z, float distance)
-        {
-            X = x;
-            Y = y;
-            Z = z;
-            Distance = distance;
-        }
+    public Plane(float x, float y, float z, float distance)
+    {
+      X = x;
+      Y = y;
+      Z = z;
+      Distance = distance;
+    }
 
     public override string ToString()
     {

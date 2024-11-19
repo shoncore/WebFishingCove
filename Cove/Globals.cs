@@ -7,3 +7,5 @@ global using Cove.Server.Plugins;
 global using Cove.Server.Utils;
 global using Microsoft.Extensions.Hosting;
 global using Microsoft.Extensions.Logging;
+global using Cove.Server.HostedServices;
+global using System.Collections.Concurrent;
