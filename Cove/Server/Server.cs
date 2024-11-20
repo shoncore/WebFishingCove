@@ -160,7 +160,29 @@
             await StartHostedServicesAsync();
 
             Logger.LogInformation("Server initialization complete. Creating lobby...");
-            SteamMatchmaking.OnLobbyCreated += OnLobbyCreated;
+            SteamMatchmaking.OnLobbyCreated += void (Result result, Lobby gameLobby) =>
+            {
+                gameLobby.SetJoinable(true);
+                gameLobby.SetData("ref", "webfishing_gamelobby");
+                gameLobby.SetData("version", WebFishingGameVersion);
+                gameLobby.SetData("code", LobbyCode);
+                gameLobby.SetData("type", CodeOnly ? "code_only" : "public");
+                gameLobby.SetData("public", "true");
+                gameLobby.SetData("age_restricted", AgeRestricted ? "true" : "false");
+                gameLobby.SetData("cap", MaxPlayers.ToString());
+
+                SteamNetworking.AllowP2PPacketRelay(true);
+
+                // This is WebFishing server-specific. Possibly benign value to determine if server appears on server list.
+                gameLobby.SetData("server_browser_value", "0");
+
+                Logger.LogInformation("Lobby created successfully.");
+                Logger.LogWarning("Lobby code: {LobbyCode}", LobbyCode);
+
+                GameLobby = gameLobby;
+                UpdatePlayerCount();
+            };
+
             SteamMatchmaking.OnLobbyMemberJoined += void (Lobby gameLobby, Friend friend) =>
             {
                 WFPlayer player = new(friend.Id, friend.Name);
@@ -231,7 +253,35 @@
                 Logger.LogWarning("P2P connection failed with {SteamId}: {Error}", steamId, error);
             };
 
-            await SteamMatchmaking.CreateLobbyAsync(MaxPlayers);
+            try
+            {
+                var lobbyResult = await SteamMatchmaking.CreateLobbyAsync(MaxPlayers);
+                if (lobbyResult.HasValue)
+                {
+                    Logger.LogInformation("Lobby created successfully.");
+                    GameLobby = lobbyResult.Value;
+
+                    GameLobby.SetJoinable(true);
+                    GameLobby.SetData("ref", "webfishing_gamelobby");
+                    GameLobby.SetData("version", WebFishingGameVersion);
+                    GameLobby.SetData("code", LobbyCode);
+                    GameLobby.SetData("type", CodeOnly ? "code_only" : "public");
+                    GameLobby.SetData("public", "true");
+                    GameLobby.SetData("age_restricted", AgeRestricted ? "true" : "false");
+                    GameLobby.SetData("cap", MaxPlayers.ToString());
+
+                    Logger.LogWarning("Lobby code: {LobbyCode}", LobbyCode);
+                }
+                else
+                {
+                    Logger.LogError("Failed to create lobby.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Failed to create lobby: {ErrorMessage}", ex.Message);
+                return;
+            }
             // var lobbyResult = await SteamMatchmaking.CreateLobbyAsync(MaxPlayers);
             // if (lobbyResult.HasValue)
             // {
@@ -244,29 +294,6 @@
             // }
 
             Logger.LogInformation("Server is now running.");
-        }
-
-        private void OnLobbyCreated(Result result, Lobby gameLobby)
-        {
-            gameLobby.SetJoinable(true);
-            gameLobby.SetData("ref", "webfishing_gamelobby");
-            gameLobby.SetData("version", WebFishingGameVersion);
-            gameLobby.SetData("code", LobbyCode);
-            gameLobby.SetData("type", CodeOnly ? "code_only" : "public");
-            gameLobby.SetData("public", "true");
-            gameLobby.SetData("age_restricted", AgeRestricted ? "true" : "false");
-            gameLobby.SetData("cap", MaxPlayers.ToString());
-
-            SteamNetworking.AllowP2PPacketRelay(true);
-
-            // This is WebFishing server-specific. Possibly benign value to determine if server appears on server list.
-            gameLobby.SetData("server_browser_value", "0");
-
-            Logger.LogInformation("Lobby created successfully.");
-            Logger.LogWarning("Lobby code: {LobbyCode}", LobbyCode);
-
-            GameLobby = gameLobby;
-            UpdatePlayerCount();
         }
 
         /// <summary>
@@ -339,6 +366,9 @@
                             break;
                         case "hideJoinMessage":
                             HideJoinMessage = GetBoolFromString(value);
+                            break;
+                        case "pluginsEnabled":
+                            PluginsEnabled = GetBoolFromString(value);
                             break;
                         case "spawnMeteor":
                             ShouldSpawnMeteor = GetBoolFromString(value);

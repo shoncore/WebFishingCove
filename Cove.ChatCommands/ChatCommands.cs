@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Cove.Server;
+﻿using Cove.Server;
 using Cove.Server.Actor;
 using Cove.Server.Plugins;
 
@@ -89,6 +86,9 @@ namespace Cove.ChatCommands
                         HandleRefreshAdminsCommand(sender);
                         break;
 
+                    case "!code":
+                        HandleCodeCommand(sender);
+                        break;
                     default:
                         SendPlayerChatMessage(sender, $"Unknown command: {command}");
                         break;
@@ -333,6 +333,12 @@ namespace Cove.ChatCommands
 
             Server.ReadAdmins();
             SendPlayerChatMessage(sender, "Admins list refreshed.");
+        }
+
+        private void HandleCodeCommand(WFPlayer sender)
+        {
+            SendPlayerChatMessage(sender, "The code is: Press ESC and click on the show code button. Idiot.");
+            return;
         }
     }
 }

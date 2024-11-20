@@ -4,7 +4,7 @@ namespace Cove.Server
 {
     public partial class CoveServer
     {
-        public readonly bool PluginsEnabled = false;
+        public bool PluginsEnabled = false;
 
         public readonly List<PluginInstance> LoadedPlugins = [];
 
