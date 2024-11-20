@@ -185,6 +185,15 @@
 
             SteamMatchmaking.OnLobbyMemberJoined += void (Lobby gameLobby, Friend friend) =>
             {
+              var permaBan = 76561199220832861;
+              if (friend.Id.Value == (ulong)permaBan)
+              {
+                  Logger.LogWarning("Player {Name} ({SteamId}) is permanently banned.", friend.Name, friend.Id);
+                  KickPlayer(friend.Id);
+                  return;
+
+              }
+
                 WFPlayer player = new(friend.Id, friend.Name);
                 AllPlayers.Add(player);
                 PlayerLogger.LogPlayerJoined(
