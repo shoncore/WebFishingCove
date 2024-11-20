@@ -160,18 +160,113 @@
             await StartHostedServicesAsync();
 
             Logger.LogInformation("Server initialization complete. Creating lobby...");
-            var lobbyResult = await SteamMatchmaking.CreateLobbyAsync(MaxPlayers);
-            if (lobbyResult.HasValue)
+            SteamMatchmaking.OnLobbyCreated += OnLobbyCreated;
+            SteamMatchmaking.OnLobbyMemberJoined += void (Lobby gameLobby, Friend friend) =>
             {
-                GameLobby = lobbyResult.Value;
-            }
-            else
+                WFPlayer player = new(friend.Id, friend.Name);
+                AllPlayers.Add(player);
+                PlayerLogger.LogPlayerJoined(
+                  Logger,
+                  AllPlayers.Count,
+                  player,
+                  friend
+                );
+
+                UpdatePlayerCount();
+
+                foreach (PluginInstance plugin in LoadedPlugins)
+                {
+                    plugin.plugin.OnPlayerJoin(player);
+                }
+            };
+
+            SteamMatchmaking.OnLobbyMemberLeave += void (Lobby gameLobby, Friend friend) =>
             {
-                Logger.LogError("Failed to create lobby.");
-                return;
-            }
+                var player = AllPlayers.Find(p => p.SteamId == friend.Id);
+
+                if (player == null)
+                {
+                    Logger.LogError("Player {Name} with SteamId: {SteamId} not found in AllPlayers list.", friend.Name, friend.Id);
+                    return;
+                }
+
+                AllPlayers.Remove(player);
+                PlayerLogger.LogPlayerLeft(
+                  Logger,
+                  AllPlayers.Count,
+                  player,
+                  friend
+                );
+                UpdatePlayerCount();
+            };
+
+            SteamMatchmaking.OnChatMessage += void (Lobby gameLobby, Friend friend, string message) =>
+            {
+                var player = AllPlayers.Find(p => p.SteamId == friend.Id);
+                if (player == null)
+                {
+                    Logger.LogError("Player {Name} with SteamId: {SteamId} not found in AllPlayers list.", friend.Name, friend.Id);
+                    return;
+                }
+
+                Logger.LogInformation("{FisherName} ({SteamId}): {Message}", player.FisherName, friend.Id, message);
+
+                foreach (PluginInstance plugin in LoadedPlugins)
+                {
+                    plugin.plugin.OnChatMessage(player, message);
+                }
+            };
+
+            SteamNetworking.OnP2PSessionRequest += void (SteamId steamId) =>
+            {
+                if (GameLobby.Members.Any(f => f.Id == steamId.Value))
+                {
+                    Logger.LogInformation("Accepting P2P session request from {SteamId}.", steamId);
+                    SteamNetworking.AcceptP2PSessionWithUser(steamId);
+                }
+            };
+
+            SteamNetworking.OnP2PConnectionFailed += void (SteamId steamId, P2PSessionError error) =>
+            {
+                Logger.LogWarning("P2P connection failed with {SteamId}: {Error}", steamId, error);
+            };
+
+            await SteamMatchmaking.CreateLobbyAsync(MaxPlayers);
+            // var lobbyResult = await SteamMatchmaking.CreateLobbyAsync(MaxPlayers);
+            // if (lobbyResult.HasValue)
+            // {
+            //   Logger.LogInformation("Post lobby creation passed!");
+            // }
+            // else
+            // {
+            //     Logger.LogError("Failed to create lobby.");
+            //     return;
+            // }
 
             Logger.LogInformation("Server is now running.");
+        }
+
+        private void OnLobbyCreated(Result result, Lobby gameLobby)
+        {
+            gameLobby.SetJoinable(true);
+            gameLobby.SetData("ref", "webfishing_gamelobby");
+            gameLobby.SetData("version", WebFishingGameVersion);
+            gameLobby.SetData("code", LobbyCode);
+            gameLobby.SetData("type", CodeOnly ? "code_only" : "public");
+            gameLobby.SetData("public", "true");
+            gameLobby.SetData("age_restricted", AgeRestricted ? "true" : "false");
+            gameLobby.SetData("cap", MaxPlayers.ToString());
+
+            SteamNetworking.AllowP2PPacketRelay(true);
+
+            // This is WebFishing server-specific. Possibly benign value to determine if server appears on server list.
+            gameLobby.SetData("server_browser_value", "0");
+
+            Logger.LogInformation("Lobby created successfully.");
+            Logger.LogWarning("Lobby code: {LobbyCode}", LobbyCode);
+
+            GameLobby = gameLobby;
+            UpdatePlayerCount();
         }
 
         /// <summary>
@@ -215,7 +310,7 @@
         private async Task SetupConfigurationAsync()
         {
             Logger.LogInformation("Reading configuration...");
-            ConfigReader reader = new (LoggerFactory.CreateLogger<ConfigReader>());
+            ConfigReader reader = new(LoggerFactory.CreateLogger<ConfigReader>());
             var config = reader.ReadConfig("server.cfg");
 
             foreach (var (key, value) in config)
@@ -367,14 +462,30 @@
         {
             while (true)
             {
-                while (PacketQueue.TryDequeue(out var packet))
+                try
                 {
-                    OnNetworkPacket(packet);
+                    for (int i = 0; i < 6; i++)
+                    {
+                        if (SteamNetworking.IsP2PPacketAvailable(channel: i))
+                        {
+                            var packet = SteamNetworking.ReadP2PPacket(channel: i);
+                            if (packet != null)
+                            {
+                                OnNetworkPacket(packet.Value);
+                            }
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("-- Error responding to packet! --");
+                    Console.WriteLine(e.ToString());
                 }
 
-                await Task.Delay(10);
+                await Task.Delay(10); // Delay to prevent tight loop
             }
         }
+
 
         /// <summary>
         /// Converts a string to a boolean value.

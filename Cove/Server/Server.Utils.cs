@@ -412,4 +412,61 @@
             }
         }
     }
+
+    /// <summary>
+    /// Provides utility functions for logging player events.
+    /// </summary>
+    public static class PlayerLogger
+    {
+        /// <summary>
+        /// Logs detailed information when a player joins the server.
+        /// </summary>
+        /// <param name="logger">The logger instance.</param>
+        /// <param name="playerCount">The current number of players on the server.</param>
+        /// <param name="player">The WFPlayer.</param>
+        /// <param name="friend">The SteamMatchmaking Friend.</param>
+        public static void LogPlayerJoined(
+            ILogger logger,
+            int playerCount,
+            WFPlayer player,
+            Friend friend
+            )
+        {
+            string aliases = string.Join(", ", friend.NameHistory);
+
+            logger.LogInformation("""
+            Player joined! Players: {PlayerCount}
+            FisherName: {Name}
+            FisherId: {FisherId}
+            SteamId: {SteamId}
+            Relationship: {Relationship}
+            Alias: {Alias}
+            """, playerCount, player.FisherName, player.FisherID, player.SteamId, friend.Relationship, aliases);
+        }
+
+        /// <summary>
+        /// Logs detailed information when a player leaves the server.
+        /// </summary>
+        /// <param name="logger">The logger instance.</param>
+        /// <param name="playerCount">The current number of players on the server.</param>
+        /// <param name="player">The WFPlayer.</param>
+        /// <param name="friend">The SteamMatchmaking Friend.</param>
+        public static void LogPlayerLeft(
+            ILogger logger,
+            int playerCount,
+            WFPlayer player,
+            Friend friend)
+        {
+            string aliases = string.Join(", ", friend.NameHistory);
+
+            logger.LogInformation("""
+            Player joined! Players: {PlayerCount}
+            FisherName: {Name}
+            FisherId: {FisherId}
+            SteamId: {SteamId}
+            Relationship: {Relationship}
+            Alias: {Alias}
+            """, playerCount, player.FisherName, player.FisherID, player.SteamId, friend.Relationship, aliases);
+        }
+    }
 }

@@ -2,7 +2,10 @@
 {
     public partial class CoveServer
     {
-        private static Dictionary<string, object> ReadPacket(byte[] packetBytes, ILogger<GodotReader> logger)
+        private static Dictionary<string, object> ReadPacket(
+            byte[] packetBytes,
+            ILogger<GodotReader> logger
+        )
         {
             return new GodotReader(packetBytes, logger).ReadPacket();
         }
@@ -19,7 +22,8 @@
             // get all players in the lobby
             foreach (Friend member in GameLobby.Members)
             {
-                if (member.Id == SteamClient.SteamId.Value) continue;
+                if (member.Id == SteamClient.SteamId.Value)
+                    continue;
                 SteamNetworking.SendP2PPacket(member.Id, packetBytes, nChannel: 2);
             }
         }

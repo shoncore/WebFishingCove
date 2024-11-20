@@ -159,19 +159,19 @@
             }
 
             // Attempt to find the sender
-            WFPlayer? sender = AllPlayers.Find(p => p.SteamId == id);
-            if (sender == null)
+            WFPlayer? player = AllPlayers.Find(p => p.SteamId == id);
+            if (player == null)
             {
                 Logger.LogError("Error: Could not find player with SteamId {SteamId}", id);
                 return;
             }
 
-            Logger.LogInformation("{FisherName} ({SteamId}): {Message}", sender.FisherName, id, message);
+            Logger.LogInformation("{FisherName} ({SteamId}): {Message}", player.FisherName, id, message);
 
             // Safely iterate through plugins
             foreach (PluginInstance plugin in LoadedPlugins)
             {
-                plugin.plugin.OnChatMessage(sender, message);
+                plugin.plugin.OnChatMessage(player, message);
             }
         }
 
