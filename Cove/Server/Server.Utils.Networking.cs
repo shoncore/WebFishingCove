@@ -28,10 +28,10 @@
             }
         }
 
-        public static void SendPacketToPlayer(Dictionary<string, object> packet, SteamId id)
+        public static void SendPacketToPlayer(Dictionary<string, object> packet, SteamId steamId)
         {
             byte[] packetBytes = WritePacket(packet);
-            SteamNetworking.SendP2PPacket(id, packetBytes, nChannel: 2);
+            SteamNetworking.SendP2PPacket(steamId, packetBytes, nChannel: 2);
         }
     }
 }

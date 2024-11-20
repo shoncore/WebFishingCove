@@ -2,36 +2,36 @@
 {
     public partial class CoveServer
     {
-        private const string BansFileName = "bans.txt";
+        private const string BanFileName = "banned_players.txt";
 
         /// <summary>
         /// Bans a player from the server and optionally saves the ban to a file.
         /// </summary>
-        /// <param name="id">The SteamId of the player to ban.</param>
+        /// <param name="steamId">The SteamId of the player to ban.</param>
         /// <param name="saveToFile">Whether to save the ban to the bans file.</param>
-        public void BanPlayer(SteamId id, bool saveToFile = false)
+        public void BanPlayer(SteamId steamId, bool saveToFile = false)
         {
             var banPacket = new Dictionary<string, object>
             {
                 { "type", "ban" }
             };
 
-            SendPacketToPlayer(banPacket, id);
+            SendPacketToPlayer(banPacket, steamId);
 
             if (saveToFile)
             {
-                WriteToBansFile(id);
+                WriteToBansFile(steamId.Value);
             }
 
-            SendBlacklistPacketToAll(id.Value.ToString());
+            SendBlacklistPacketToAll(steamId.Value.ToString());
         }
 
         /// <summary>
         /// Checks if a player is banned based on their SteamId.
         /// </summary>
-        /// <param name="id">The SteamId of the player to check.</param>
+        /// <param name="steamId">The SteamId of the player to check.</param>
         /// <returns>True if the player is banned; otherwise, false.</returns>
-        public bool IsPlayerBanned(SteamId id)
+        public bool IsPlayerBanned(SteamId steamId)
         {
             string filePath = GetBansFilePath();
 
@@ -41,27 +41,27 @@
             }
 
             var fileContent = File.ReadLines(filePath);
-            return fileContent.Any(line => line.Contains(id.Value.ToString()));
+            return fileContent.Any(line => line.Contains(steamId.Value.ToString()));
         }
 
         /// <summary>
         /// Writes a player's SteamId and name to the bans file.
         /// </summary>
-        /// <param name="id">The SteamId of the player to write.</param>
-        private void WriteToBansFile(SteamId id)
+        /// <param name="steamId">The SteamId of the player to write.</param>
+        private void WriteToBansFile(SteamId steamId)
         {
             string filePath = GetBansFilePath();
 
-            var player = AllPlayers.Find(p => p.SteamId == id);
+            var player = AllPlayers.Find(p => p.SteamId.Value == steamId.Value);
             if (player == null)
             {
-                Logger.LogWarning("Cannot find player with SteamId {SteamId} to write to bans file.", id.Value);
+                Logger.LogWarning("Cannot find player with SteamId {SteamId} to write to bans file.", steamId.Value);
                 return;
             }
 
             try
             {
-                File.AppendAllText(filePath, $"\n{id.Value} #{player.FisherName}");
+                File.AppendAllText(filePath, $"\n{steamId.Value} #{player.FisherName}");
                 Logger.LogInformation("Added {FisherName} [{SteamId}] to bans file.", player.FisherName, player.SteamId);
             }
             catch (IOException ex)
@@ -73,15 +73,15 @@
         /// <summary>
         /// Kicks a player from the server.
         /// </summary>
-        /// <param name="id">The SteamId of the player to kick.</param>
-        public static void KickPlayer(SteamId id)
+        /// <param name="steamId">The SteamId of the player to kick.</param>
+        public static void KickPlayer(SteamId steamId)
         {
             var kickPacket = new Dictionary<string, object>
             {
                 { "type", "kick" }
             };
 
-            SendPacketToPlayer(kickPacket, id);
+            SendPacketToPlayer(kickPacket, steamId);
         }
 
         /// <summary>
@@ -90,7 +90,7 @@
         /// <returns>The bans file path.</returns>
         private static string GetBansFilePath()
         {
-            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, BansFileName);
+            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, BanFileName);
         }
     }
 }

@@ -33,8 +33,6 @@
         /// <param name="state">Optional state parameter, unused in this implementation.</param>
         private void DoWork(object? state)
         {
-            _logger.LogInformation("HostSpawnMetalService is working.");
-
             try
             {
                 UpdateServerBrowserValue();
@@ -74,7 +72,7 @@
 
                 if (metalCount > 7)
                 {
-                    _logger.LogInformation("Metal spawn threshold reached. Skipping spawn.");
+                    // _logger.LogInformation("Metal spawn threshold reached. Skipping spawn.");
                     return;
                 }
 

@@ -47,6 +47,7 @@
                     break;
 
                 default:
+                    //TODO: Log and cache the packet type so we do not spam the console, but still have a record of the failed packet types.
                     // Logger.LogWarning("Unhandled packet type: {Type}", type);
                     break;
             }
@@ -55,7 +56,10 @@
         private Dictionary<string, object> ParsePacket(P2Packet packet)
         {
             var decompressedData = GzipHelper.DecompressGzip(packet.Data);
-            var packetInfo = ReadPacket(decompressedData, LoggerFactory.CreateLogger<GodotReader>());
+            var packetInfo = ReadPacket(
+                decompressedData,
+                LoggerFactory.CreateLogger<GodotReader>()
+            );
             return packetInfo;
         }
 
@@ -89,20 +93,33 @@
 
             if (IsPlayerAdmin(steamId))
             {
-                MessagePlayer("You're an admin on this server!", steamId);
+                MessagePlayer(
+                    "You're an admin on this server! Type !help to see commands.",
+                    steamId
+                );
             }
         }
 
         private void HandleInstanceActor(Dictionary<string, object> packetInfo, SteamId steamId)
         {
-            if (!packetInfo.TryGetValue("params", out var paramsObj) || paramsObj is not Dictionary<string, object> parameters)
+            if (
+                !packetInfo.TryGetValue("params", out var paramsObj)
+                || paramsObj is not Dictionary<string, object> parameters
+            )
                 return;
 
-            if (parameters.TryGetValue("actor_type", out var actorTypeObj) && actorTypeObj is string actorType)
+            if (
+                parameters.TryGetValue("actor_type", out var actorTypeObj)
+                && actorTypeObj is string actorType
+            )
             {
-                if (actorType == "player" && parameters.TryGetValue("actor_id", out var actorIdObj) && actorIdObj is long actorId)
+                if (
+                    actorType == "player"
+                    && parameters.TryGetValue("actor_id", out var actorIdObj)
+                    && actorIdObj is long actorId
+                )
                 {
-                    var player = AllPlayers.Find(p => p.SteamId == steamId);
+                    var player = AllPlayers.Find(p => p.SteamId.Value == steamId.Value);
                     if (player == null)
                     {
                         Logger.LogInformation("No fisher found for player instance!");
@@ -122,11 +139,18 @@
 
         private void HandleActorUpdate(Dictionary<string, object> packetInfo, SteamId steamId)
         {
-            if (!packetInfo.TryGetValue("actor_id", out var actorIdObj) || actorIdObj is not long actorId)
+            if (
+                !packetInfo.TryGetValue("actor_id", out var actorIdObj)
+                || actorIdObj is not long actorId
+            )
                 return;
 
             var player = AllPlayers.Find(p => p.InstanceID == actorId);
-            if (player != null && packetInfo.TryGetValue("pos", out var posObj) && posObj is Vector3 position)
+            if (
+                player != null
+                && packetInfo.TryGetValue("pos", out var posObj)
+                && posObj is Vector3 position
+            )
             {
                 player.Position = position;
             }
@@ -149,7 +173,7 @@
             SteamNetworking.SendP2PPacket(steamId, WritePacket(pongPacket), nChannel: 1);
         }
 
-        void OnPlayerChat(string message, SteamId id)
+        void OnPlayerChat(string message, SteamId steamId)
         {
             // Ensure AllPlayers is not null
             if (AllPlayers == null)
@@ -159,14 +183,25 @@
             }
 
             // Attempt to find the sender
-            WFPlayer? player = AllPlayers.Find(p => p.SteamId == id);
+            Logger.LogWarning("Chat message from {SteamId}", steamId.Value);
+            Logger.LogWarning("AllPlayers: {AllPlayers}", AllPlayers);
+
+            WFPlayer? player = AllPlayers.Find(p => p.SteamId.Value == steamId.Value);
             if (player == null)
             {
-                Logger.LogError("Error: Could not find player with SteamId {SteamId}", id);
+                Logger.LogError(
+                    "Error: Could not find player with SteamId {SteamId}",
+                    steamId.Value
+                );
                 return;
             }
 
-            Logger.LogInformation("{FisherName} ({SteamId}): {Message}", player.FisherName, id, message);
+            Logger.LogInformation(
+                "{FisherName} ({SteamId}): {Message}",
+                player.FisherName,
+                steamId.Value,
+                message
+            );
 
             // Safely iterate through plugins
             foreach (PluginInstance plugin in LoadedPlugins)
@@ -175,29 +210,44 @@
             }
         }
 
-
         private void HandleActorAction(Dictionary<string, object> packetInfo, SteamId steamId)
         {
-            if (!packetInfo.TryGetValue("action", out var actionObj) || actionObj is not string action)
+            if (
+                !packetInfo.TryGetValue("action", out var actionObj)
+                || actionObj is not string action
+            )
                 return;
 
-            if (action == "_sync_create_bubble" && packetInfo.TryGetValue("params", out var paramsObj) && paramsObj is Dictionary<int, object> parameters)
+            if (
+                action == "_sync_create_bubble"
+                && packetInfo.TryGetValue("params", out var paramsObj)
+                && paramsObj is Dictionary<int, object> parameters
+            )
             {
                 if (parameters.TryGetValue(0, out var messageObj) && messageObj is string message)
                 {
-
                     OnPlayerChat(message, steamId);
                 }
             }
 
-            if (action == "_wipe_actor" && packetInfo.TryGetValue("params", out paramsObj) && paramsObj is Dictionary<int, object> actorParams)
+            if (
+                action == "_wipe_actor"
+                && packetInfo.TryGetValue("params", out paramsObj)
+                && paramsObj is Dictionary<int, object> actorParams
+            )
             {
-                if (actorParams.TryGetValue(0, out var actorToWipeObj) && actorToWipeObj is long actorToWipe)
+                if (
+                    actorParams.TryGetValue(0, out var actorToWipeObj)
+                    && actorToWipeObj is long actorToWipe
+                )
                 {
                     var serverInst = ServerOwnedInstances.Find(i => i.InstanceID == actorToWipe);
                     if (serverInst != null)
                     {
-                        Logger.LogInformation("Player request to remove {Type} Actor", serverInst.Type);
+                        Logger.LogInformation(
+                            "Player request to remove {Type} Actor",
+                            serverInst.Type
+                        );
                         RemoveServerActor(serverInst);
                     }
                 }
@@ -224,22 +274,25 @@
 
         private void KickPlayerForIllegalActor(SteamId steamId, string actorType)
         {
-            var player = AllPlayers.Find(p => p.SteamId == steamId);
+            var player = AllPlayers.Find(p => p.SteamId.Value == steamId.Value);
             if (player == null)
             {
                 Logger.LogInformation("No player found for illegal actor kick!");
                 return;
             }
 
-            Logger.LogInformation("Kicking player {FisherName} [{SteamId}] for spawning illegal actor: {ActorType}", player.FisherName, player.SteamId, actorType);
+            Logger.LogInformation(
+                "Kicking player {FisherName} [{SteamId}] for spawning illegal actor: {ActorType}",
+                player.FisherName,
+                player.SteamId.Value,
+                actorType
+            );
 
-            var kickPacket = new Dictionary<string, object>
-      {
-          { "type", "kick" }
-      };
-
+            var kickPacket = new Dictionary<string, object> { { "type", "kick" } };
             SendPacketToPlayer(kickPacket, steamId);
-            MessageGlobal($"{player?.FisherName ?? "Unknown player name"} [{player?.SteamId.ToString() ?? "Unknown SteamId"}] was kicked for spawning illegal actor: {actorType}");
+            MessageGlobal(
+                $"{player?.FisherName ?? "Unknown player name"} [{player?.SteamId.Value.ToString() ?? "Unknown SteamId"}] was kicked for spawning illegal actor: {actorType}"
+            );
         }
     }
 }

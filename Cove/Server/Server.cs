@@ -24,7 +24,7 @@
         /// <summary>
         /// Gets the name of the server.
         /// </summary>
-        public string ServerName { get; private set; } = "A Cove Dedicated Server";
+        public string ServerName { get; private set; } = "A WebFishing Cove Dedicated Server";
 
         /// <summary>
         /// Gets the lobby code used for joining the server.
@@ -87,11 +87,6 @@
         public List<WFActor> ServerOwnedInstances { get; private set; } = [];
 
         /// <summary>
-        /// Gets or sets the queue for incoming network packets.
-        /// </summary>
-        private ConcurrentQueue<P2Packet> PacketQueue { get; set; } = [];
-
-        /// <summary>
         /// Gets or sets the list of fish spawn points.
         /// </summary>
         private List<Vector3>? FishPoints { get; set; }
@@ -140,6 +135,22 @@
                 return;
             }
 
+            // Create banned_players.txt if it doesn't already exist
+            string banFile = $"{AppDomain.CurrentDomain.BaseDirectory}banned_players.txt";
+            if (!File.Exists(banFile))
+            {
+                FileStream f = File.Create(banFile);
+                f.Close();
+            }
+
+            // Create admins.cfg if it doesn't already exist
+            string adminFile = $"{AppDomain.CurrentDomain.BaseDirectory}admins.cfg";
+            if (!File.Exists(adminFile))
+            {
+                FileStream f = File.Create(adminFile);
+                f.Close();
+            }
+
             await SetupConfigurationAsync();
 
             Logger.LogInformation("Loading admins...");
@@ -185,21 +196,21 @@
 
             SteamMatchmaking.OnLobbyMemberJoined += void (Lobby gameLobby, Friend friend) =>
             {
-              var permaBans = new HashSet<ulong>
+                var permaBans = new HashSet<ulong>
               {
                   76561199220832861, // Add more SteamIDs as needed
                   76561198000000000
               };
 
-              if (permaBans.Contains(friend.Id.Value))
-              {
-                  Logger.LogWarning("Player {Name} ({SteamId}) is permanently banned.", friend.Name, friend.Id.Value);
-                  KickPlayer(friend.Id.Value);
-                  return;
-              }
+                if (permaBans.Contains(friend.Id.Value))
+                {
+                    Logger.LogWarning("Player {Name} ({SteamId}) is permanently banned.", friend.Name, friend.Id.Value);
+                    KickPlayer(friend.Id.Value);
+                    return;
+                }
 
 
-                WFPlayer player = new(friend.Id, friend.Name);
+                WFPlayer player = new(friend.Id.Value, friend.Name);
                 AllPlayers.Add(player);
 
                 PlayerLogger.LogPlayerJoined(
@@ -219,11 +230,11 @@
 
             SteamMatchmaking.OnLobbyMemberLeave += void (Lobby gameLobby, Friend friend) =>
             {
-                var player = AllPlayers.Find(p => p.SteamId == friend.Id);
+                var player = AllPlayers.Find(p => p.SteamId.Value == friend.Id.Value);
 
                 if (player == null)
                 {
-                    Logger.LogError("Player {Name} with SteamId: {SteamId} not found in AllPlayers list.", friend.Name, friend.Id);
+                    Logger.LogError("Player {Name} with SteamId: {SteamId} not found in AllPlayers list.", friend.Name, friend.Id.Value);
                     return;
                 }
 
@@ -239,14 +250,14 @@
 
             SteamMatchmaking.OnChatMessage += void (Lobby gameLobby, Friend friend, string message) =>
             {
-                var player = AllPlayers.Find(p => p.SteamId == friend.Id);
+                var player = AllPlayers.Find(p => p.SteamId.Value == friend.Id.Value);
                 if (player == null)
                 {
-                    Logger.LogError("Player {Name} with SteamId: {SteamId} not found in AllPlayers list.", friend.Name, friend.Id);
+                    Logger.LogError("Player {Name} with SteamId: {SteamId} not found in AllPlayers list.", friend.Name, friend.Id.Value);
                     return;
                 }
 
-                Logger.LogInformation("{FisherName} ({SteamId}): {Message}", player.FisherName, friend.Id, message);
+                Logger.LogInformation("{FisherName} ({SteamId}): {Message}", player.FisherName, friend.Id.Value, message);
 
                 foreach (PluginInstance plugin in LoadedPlugins)
                 {
@@ -395,7 +406,11 @@
                             ShouldSpawnPortal = GetBoolFromString(value);
                             break;
                         default:
-                            Logger.LogWarning("Unsupported configuration key: {Key}", key);
+                            if (!UnhandledKeyLogger.KeyExists(value))
+                            {
+                                Logger.LogWarning("Unhandled config key: {Key}", key);
+                                UnhandledKeyLogger.AddKey(key);
+                            }
                             break;
                     }
                 }
@@ -459,7 +474,7 @@
             }
             catch (Exception ex)
             {
-                Logger.LogError("Error initializing Steam Client: {ErrorMessage}", ex.Message);
+                Logger.LogError(ex, "Failed to initialize Steam Client!");
                 return false;
             }
         }

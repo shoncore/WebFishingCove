@@ -34,12 +34,9 @@
         /// <param name="state">Optional state parameter, unused in this implementation.</param>
         private void DoWork(object? state)
         {
-            _logger.LogInformation("HostSpawnService is working.");
-
             try
             {
                 RemoveExpiredInstances();
-
                 var type = DetermineSpawnType();
                 SpawnType(type);
             }

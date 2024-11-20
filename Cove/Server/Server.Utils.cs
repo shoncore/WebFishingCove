@@ -136,12 +136,11 @@
             }
         }
 
-
         /// <summary>
         /// Finds a server-owned actor by its ID.
         /// </summary>
-        private WFActor FindActorByID(long id) =>
-          ServerOwnedInstances.Find(a => a.InstanceID == id)!;
+        private WFActor FindActorByID(long instanceId) =>
+            ServerOwnedInstances.Find(a => a.InstanceID == instanceId)!;
 
         /// <summary>
         /// Spawns a generic actor at the specified position.
@@ -201,7 +200,7 @@
         /// <summary>
         /// Sends all server-owned actors to a specific player.
         /// </summary>
-        private void SendPlayerAllServerActors(SteamId id)
+        private void SendPlayerAllServerActors(SteamId steamId)
         {
             foreach (var actor in ServerOwnedInstances)
             {
@@ -220,7 +219,7 @@
                     }
                 };
 
-                SendPacketToPlayer(spawnPacket, id);
+                SendPacketToPlayer(spawnPacket, steamId);
             }
         }
 
@@ -255,7 +254,14 @@
         /// <summary>
         /// Sends a letter to a player and returns the letter ID.
         /// </summary>
-        public int SendLetter(SteamId to, SteamId from, string header, string body, string closing, string user)
+        public int SendLetter(
+            SteamId to,
+            SteamId from,
+            string header,
+            string body,
+            string closing,
+            string user
+        )
         {
             // Note: This currently crashes the game.
             var rand = new Random();
@@ -301,7 +307,8 @@
 
             foreach (var member in GameLobby.Members)
             {
-                if (member.Id == SteamClient.SteamId.Value) continue;
+                if (member.Id == SteamClient.SteamId.Value)
+                    continue;
                 SteamNetworking.SendP2PPacket(member.Id, WritePacket(chatPacket), nChannel: 2);
             }
         }
@@ -309,7 +316,7 @@
         /// <summary>
         /// Sends a message to a specific player.
         /// </summary>
-        public void MessagePlayer(string msg, SteamId id, string color = "ffffff")
+        public void MessagePlayer(string msg, SteamId steamId, string color = "ffffff")
         {
             var chatPacket = new Dictionary<string, object>
             {
@@ -322,7 +329,7 @@
                 ["zone_owner"] = 1
             };
 
-            SteamNetworking.SendP2PPacket(id, WritePacket(chatPacket), nChannel: 2);
+            SteamNetworking.SendP2PPacket(steamId, WritePacket(chatPacket), nChannel: 2);
         }
 
         /// <summary>
@@ -335,11 +342,7 @@
                 ["type"] = "actor_action",
                 ["actor_id"] = instance.InstanceID,
                 ["action"] = "_set_zone",
-                ["params"] = new Dictionary<int, object>
-                {
-                    [0] = zoneName,
-                    [1] = zoneOwner
-                }
+                ["params"] = new Dictionary<int, object> { [0] = zoneName, [1] = zoneOwner }
             };
 
             SendPacketToPlayers(actionPacket);
@@ -364,38 +367,35 @@
         /// <summary>
         /// Checks if a player is an admin.
         /// </summary>
-        // public bool IsPlayerAdmin(SteamId id) =>
-        //   Admins.Any(a => long.Parse(a) == (long)id.Value);
-        public bool IsPlayerAdmin(SteamId id)
+        public bool IsPlayerAdmin(SteamId steamId)
         {
-            // Example: Read admin entries from a file or configuration
             var adminEntries = Admins;
 
-            return adminEntries.Any(entry =>
-            {
-                try
-                {
-                    // Split entry into parts
-                    var parts = entry.Split('=').Select(p => p.Trim()).ToArray();
+            return adminEntries.Any(
+                (Func<string, bool>)(
+                    entry =>
+                    {
+                        try
+                        {
+                            // admins.cfg format: "steamid=admin"
+                            var parts = entry.Split('=').Select(p => p.Trim()).ToArray();
 
-                    // Validate entry format
-                    if (parts.Length != 2)
-                        throw new FormatException($"Invalid entry format: {entry}");
+                            if (parts.Length != 2)
+                                throw new FormatException($"Invalid entry format: {entry}");
 
-                    // Parse the SteamID and admin status
-                    var steamId = ulong.Parse(parts[0]); // Ensure SteamID is a valid ulong
-                    var isAdmin = bool.Parse(parts[1]);  // Ensure admin status is a valid bool
+                            var parsedSteamId = ulong.Parse(parts[0]);
+                            var isAdmin = bool.Parse(parts[1]);
 
-                    // Check if the given ID matches and the player is marked as admin
-                    return steamId == id.Value && isAdmin;
-                }
-                catch (Exception ex)
-                {
-                    // Log invalid entries for debugging purposes
-                    Logger.LogError(ex, "Failed to parse admin entry {Entry}", entry);
-                    return false; // Ignore invalid entries
-                }
-            });
+                            return parsedSteamId == steamId.Value && isAdmin;
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError(ex, "Failed to parse admin entry {Entry}", entry);
+                            return false;
+                        }
+                    }
+                )
+            );
         }
 
         /// <summary>
@@ -406,14 +406,15 @@
             GameLobby.SetData("lobby_name", ServerName);
             GameLobby.SetData("name", ServerName);
 
-            Console.Title = $"WebFishingCove: ${ServerName} | {GameLobby.MemberCount - 1} players connected";
+            Console.Title =
+                $"WebFishingCove: ${ServerName} | {GameLobby.MemberCount - 1} players connected";
         }
 
         /// <summary>
         /// Disconnects all players from the server.
         /// </summary>
         public void DisconnectAllPlayers() =>
-          SendPacketToPlayers(new Dictionary<string, object> { ["type"] = "server_close" });
+            SendPacketToPlayers(new Dictionary<string, object> { ["type"] = "server_close" });
 
         /// <summary>
         /// Creates a response packet for actor requests.
@@ -461,18 +462,26 @@
             int playerCount,
             WFPlayer player,
             Friend friend
-            )
+        )
         {
             string aliases = string.Join(", ", friend.NameHistory);
 
-            logger.LogInformation("""
-            Player joined! Players: {PlayerCount}
-            FisherName: {Name}
-            FisherId: {FisherId}
-            SteamId: {SteamId}
-            Relationship: {Relationship}
-            Alias: {Alias}
-            """, playerCount, player.FisherName, player.FisherID, player.SteamId, friend.Relationship, aliases);
+            logger.LogInformation(
+                """
+                Player joined! Players: {PlayerCount}
+                FisherName: {Name}
+                FisherId: {FisherId}
+                SteamId: {SteamId}
+                Relationship: {Relationship}
+                Alias: {Alias}
+                """,
+                playerCount,
+                player.FisherName,
+                player.FisherID,
+                player.SteamId.Value,
+                friend.Relationship,
+                aliases
+            );
         }
 
         /// <summary>
@@ -486,18 +495,51 @@
             ILogger logger,
             int playerCount,
             WFPlayer player,
-            Friend friend)
+            Friend friend
+        )
         {
             string aliases = string.Join(", ", friend.NameHistory);
 
-            logger.LogInformation("""
-            Player joined! Players: {PlayerCount}
-            FisherName: {Name}
-            FisherId: {FisherId}
-            SteamId: {SteamId}
-            Relationship: {Relationship}
-            Alias: {Alias}
-            """, playerCount, player.FisherName, player.FisherID, player.SteamId, friend.Relationship, aliases);
+            logger.LogInformation(
+                """
+                Player joined! Players: {PlayerCount}
+                FisherName: {Name}
+                FisherId: {FisherId}
+                SteamId: {SteamId}
+                Relationship: {Relationship}
+                Alias: {Alias}
+                """,
+                playerCount,
+                player.FisherName,
+                player.FisherID,
+                player.SteamId.Value,
+                friend.Relationship,
+                aliases
+            );
+        }
+    }
+
+    public class UnhandledKeyLogger
+    {
+        private static readonly HashSet<string> _unhandledKeys = new();
+
+        public static void AddKey(string key)
+        {
+            if (_unhandledKeys.Add(key))
+            {
+                // Key is new, add it to the set and log it
+                Console.WriteLine($"[WARNING] Unhandled key added: {key}");
+            }
+            else
+            {
+                // Key already exists, no need to log
+                Console.WriteLine($"[INFO] Key already exists: {key}");
+            }
+        }
+
+        public static bool KeyExists(string key)
+        {
+            return _unhandledKeys.Contains(key);
         }
     }
 }

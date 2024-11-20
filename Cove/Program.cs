@@ -62,7 +62,7 @@ while (true)
                 if (ulong.TryParse(identifier, out ulong steamIdValue))
                 {
                     SteamId steamId = new() { Value = steamIdValue };
-                    player = webfishingServer.AllPlayers.Find(p => p.SteamId == steamId);
+                    player = webfishingServer.AllPlayers.Find(p => p.SteamId.Value == steamId.Value);
                 }
                 else
                 {
@@ -71,14 +71,14 @@ while (true)
 
                 if (player != null)
                 {
-                    if (webfishingServer.IsPlayerBanned(player.SteamId))
+                    if (webfishingServer.IsPlayerBanned(player.SteamId.Value))
                     {
-                        logger.LogInformation("Player {Username}, [{SteamId}] is already banned!", player.FisherName, player.SteamId);
+                        logger.LogInformation("Player {Username}, [{SteamId}] is already banned!", player.FisherName, player.SteamId.Value);
                     }
                     else
                     {
-                        webfishingServer.BanPlayer(player.SteamId, true);
-                        logger.LogInformation("Banned player {Username}, [{SteamId}]", player.FisherName, player.SteamId);
+                        webfishingServer.BanPlayer(player.SteamId.Value, true);
+                        logger.LogInformation("Banned player {Username}, [{SteamId}]", player.FisherName, player.SteamId.Value);
                     }
                 }
                 else
@@ -103,7 +103,7 @@ while (true)
                 {
                     // Identifier is a Steam ID
                     SteamId steamId = new() { Value = steamIdValue };
-                    player = webfishingServer.AllPlayers.Find(p => p.SteamId == steamId);
+                    player = webfishingServer.AllPlayers.Find(p => p.SteamId.Value == steamId.Value);
                 }
                 else
                 {
@@ -114,7 +114,7 @@ while (true)
                 if (player != null)
                 {
                     CoveServer.KickPlayer(player.SteamId);
-                    logger.LogInformation("Kicked player {Username}, [{SteamId}]", player.FisherName, player.SteamId);
+                    logger.LogInformation("Kicked player {Username}, [{SteamId}]", player.FisherName, player.SteamId.Value);
                 }
                 else
                 {
@@ -133,7 +133,7 @@ while (true)
 
             foreach (WFPlayer player in webfishingServer.AllPlayers)
             {
-                logger.LogInformation("[{Username}]: {SteamId}", player.FisherName, player.SteamId);
+                logger.LogInformation("[{Username}]: {SteamId}", player.FisherName, player.SteamId.Value);
             }
             break;
 

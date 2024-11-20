@@ -37,6 +37,7 @@
             server ?? throw new ArgumentNullException(nameof(server));
         private Timer? _timer;
         private const string Endpoint = "https://hooklinesinker.lol/servers";
+        private static readonly JsonSerializerOptions JsonSerializerOptions = new JsonSerializerOptions { WriteIndented = false };
 
         /// <summary>
         /// Starts the <see cref="HLSServerListService"/> and initializes the periodic timer.
@@ -61,20 +62,18 @@
         /// <param name="state">Optional state parameter, unused in this implementation.</param>
         private async void DoWorkAsync(object? state)
         {
-            _logger.LogInformation("HLSServerListService is working.");
-
             try
             {
                 var requestBody = CreateRequestBody();
                 var jsonBody = JsonSerializer.Serialize(
                     requestBody,
-                    new JsonSerializerOptions { WriteIndented = false }
+                    JsonSerializerOptions
                 );
 
                 using var client = new HttpClient();
                 using var content = new StringContent(
                     jsonBody,
-                    System.Text.Encoding.UTF8,
+                    Encoding.UTF8,
                     "application/json"
                 );
 
