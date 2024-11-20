@@ -364,8 +364,39 @@
         /// <summary>
         /// Checks if a player is an admin.
         /// </summary>
-        public bool IsPlayerAdmin(SteamId id) =>
-          Admins.Any(a => long.Parse(a) == (long)id.Value);
+        // public bool IsPlayerAdmin(SteamId id) =>
+        //   Admins.Any(a => long.Parse(a) == (long)id.Value);
+        public bool IsPlayerAdmin(SteamId id)
+        {
+            // Example: Read admin entries from a file or configuration
+            var adminEntries = Admins;
+
+            return adminEntries.Any(entry =>
+            {
+                try
+                {
+                    // Split entry into parts
+                    var parts = entry.Split('=').Select(p => p.Trim()).ToArray();
+
+                    // Validate entry format
+                    if (parts.Length != 2)
+                        throw new FormatException($"Invalid entry format: {entry}");
+
+                    // Parse the SteamID and admin status
+                    var steamId = ulong.Parse(parts[0]); // Ensure SteamID is a valid ulong
+                    var isAdmin = bool.Parse(parts[1]);  // Ensure admin status is a valid bool
+
+                    // Check if the given ID matches and the player is marked as admin
+                    return steamId == id.Value && isAdmin;
+                }
+                catch (Exception ex)
+                {
+                    // Log invalid entries for debugging purposes
+                    Logger.LogError(ex, "Failed to parse admin entry {Entry}", entry);
+                    return false; // Ignore invalid entries
+                }
+            });
+        }
 
         /// <summary>
         /// Updates the player count in the lobby data and console title.

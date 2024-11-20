@@ -47,7 +47,7 @@
                     break;
 
                 default:
-                    Logger.LogWarning("Unhandled packet type: {Type}", type);
+                    // Logger.LogWarning("Unhandled packet type: {Type}", type);
                     break;
             }
         }

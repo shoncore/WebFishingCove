@@ -185,17 +185,23 @@
 
             SteamMatchmaking.OnLobbyMemberJoined += void (Lobby gameLobby, Friend friend) =>
             {
-              var permaBan = 76561199220832861;
-              if (friend.Id.Value == (ulong)permaBan)
+              var permaBans = new HashSet<ulong>
               {
-                  Logger.LogWarning("Player {Name} ({SteamId}) is permanently banned.", friend.Name, friend.Id);
-                  KickPlayer(friend.Id);
-                  return;
+                  76561199220832861, // Add more SteamIDs as needed
+                  76561198000000000
+              };
 
+              if (permaBans.Contains(friend.Id.Value))
+              {
+                  Logger.LogWarning("Player {Name} ({SteamId}) is permanently banned.", friend.Name, friend.Id.Value);
+                  KickPlayer(friend.Id.Value);
+                  return;
               }
+
 
                 WFPlayer player = new(friend.Id, friend.Name);
                 AllPlayers.Add(player);
+
                 PlayerLogger.LogPlayerJoined(
                   Logger,
                   AllPlayers.Count,
