@@ -75,8 +75,8 @@
         {
             if (!HideJoinMessage)
             {
-                MessagePlayer("This is a Cove dedicated server!", steamId);
-                MessagePlayer("Please report any issues to the GitHub (xr0.xyz/cove)", steamId);
+                MessagePlayer($"Welcome to {ServerName}! ", steamId);
+                MessagePlayer("For help contact @lo_sh on discord.", steamId);
             }
 
             var hostPacket = new Dictionary<string, object>
