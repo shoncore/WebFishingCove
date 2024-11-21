@@ -40,11 +40,11 @@ namespace Cove.ChatCommands
         /// <summary>
         /// Called when a chat message is received.
         /// </summary>
-        /// <param name="sender">The player who sent the message.</param>
+        /// <param name="player">The player who sent the message.</param>
         /// <param name="message">The message content.</param>
-        public override void OnChatMessage(WFPlayer sender, string message)
+        public override void OnChatMessage(WFPlayer player, string message)
         {
-            base.OnChatMessage(sender, message);
+            base.OnChatMessage(player, message);
 
             if (string.IsNullOrEmpty(message))
                 return;
@@ -59,38 +59,38 @@ namespace Cove.ChatCommands
                 switch (command)
                 {
                     case "!help":
-                        HandleHelpCommand(sender);
+                        HandleHelpCommand(player);
                         break;
 
                     case "!users":
-                        HandleUsersCommand(sender, commandParts);
+                        HandleUsersCommand(player, commandParts);
                         break;
 
                     case "!spawn":
-                        HandleSpawnCommand(sender, commandParts);
+                        HandleSpawnCommand(player, commandParts);
                         break;
 
                     case "!kick":
-                        HandleKickCommand(sender, commandParts);
+                        HandleKickCommand(player, commandParts);
                         break;
 
                     case "!ban":
-                        HandleBanCommand(sender, commandParts);
+                        HandleBanCommand(player, commandParts);
                         break;
 
                     case "!setjoinable":
-                        HandleSetJoinableCommand(sender, commandParts);
+                        HandleSetJoinableCommand(player, commandParts);
                         break;
 
                     case "!refreshadmins":
-                        HandleRefreshAdminsCommand(sender);
+                        HandleRefreshAdminsCommand(player);
                         break;
 
                     case "!code":
-                        HandleCodeCommand(sender);
+                        HandleCodeCommand(player);
                         break;
                     default:
-                        SendPlayerChatMessage(sender, $"Unknown command: {command}");
+                        SendPlayerChatMessage(player, $"Unknown command: {command}");
                         break;
                 }
             }
@@ -108,7 +108,10 @@ namespace Cove.ChatCommands
             SendPlayerChatMessage(sender, "!spawn <actor> - Spawns an actor");
             SendPlayerChatMessage(sender, "!kick <player> - Kicks a player");
             SendPlayerChatMessage(sender, "!ban <player> - Bans a player");
+            SendPlayerChatMessage(sender, "!unban <player> - Unbans a player");
             SendPlayerChatMessage(sender, "!setjoinable <true/false> - Opens or closes the lobby");
+            SendPlayerChatMessage(sender, "!say <player> <message> - Sends an admin message to a player");
+            SendPlayerChatMessage(sender, "!discord - Shows the Discord invite link");
             SendPlayerChatMessage(sender, "!refreshadmins - Refreshes the admins list");
         }
 
@@ -148,7 +151,7 @@ namespace Cove.ChatCommands
             messageBody.AppendLine("Players in the server:");
             foreach (var player in playersOnPage)
             {
-                messageBody.AppendLine($"{player.FisherName}: {player.FisherID}");
+                messageBody.AppendLine($"{player.FisherName}: {player.FisherId}");
             }
 
             messageBody.AppendLine($"Page {pageNumber} of {totalPages}");

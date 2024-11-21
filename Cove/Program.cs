@@ -131,20 +131,20 @@ while (true)
         case "players":
             logger.LogInformation("Players in server ({Total}):", webfishingServer.AllPlayers.Count);
 
-            foreach (WFPlayer player in webfishingServer.AllPlayers)
-            {
-                logger.LogInformation("[{Username}]: {SteamId}", player.FisherName, player.SteamId.Value);
-            }
+            webfishingServer.AllPlayers.ForEach(p => logger.LogInformation("[{Username}]: {SteamId}", p.FisherName, p.SteamId.Value));
             break;
 
         case "help":
-            logger.LogInformation("Commands:");
-            logger.LogInformation("exit - Closes the application");
-            logger.LogInformation("say <message> - Sends a message to all players");
-            logger.LogInformation("ban <player> - Bans a player. <player> can be a player name or Steam ID");
-            logger.LogInformation("kick <player> - Kicks a player");
-            logger.LogInformation("help - Shows this message");
-            logger.LogInformation("players - Lists all players");
+            logger.LogInformation("""
+                Commands:
+                exit - Closes the application
+                say <message> - Sends a message to all players
+                ban <player> - Bans a player. <player> can be a player name or Steam ID
+                unban <player> - Unbans a player. <player> can be a player name or Steam ID
+                kick <player> - Kicks a player
+                help - Shows this message
+                players - Lists all players
+                """);
             break;
 
         default:

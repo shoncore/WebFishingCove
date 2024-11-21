@@ -10,115 +10,27 @@
     /// <param name="loggerFactory">The logger factory instance.</param>
     public partial class CoveServer(ILogger<CoveServer> logger, ILoggerFactory loggerFactory)
     {
-
-        /// <summary>
-        /// The game version.
-        /// </summary>
         public readonly string WebFishingGameVersion = "1.1";
-
-        /// <summary>
-        /// Gets the maximum number of players allowed in the server.
-        /// </summary>
         public int MaxPlayers { get; private set; } = 24;
-
-        /// <summary>
-        /// Gets the name of the server.
-        /// </summary>
         public string ServerName { get; private set; } = "A WebFishing Cove Dedicated Server";
-
-        /// <summary>
-        /// Gets the lobby code used for joining the server.
-        /// </summary>
         public string LobbyCode { get; private set; } = GenerateLobbyCode();
-
-        /// <summary>
-        /// Gets a value indicating whether the server is joinable only by code.
-        /// </summary>
         public bool CodeOnly { get; private set; } = true;
-
-        /// <summary>
-        /// Gets a value indicating whether the server is age restricted.
-        /// </summary>
-        public bool AgeRestricted { get; private set; } = false;
-
-        /// <summary>
-        /// Gets a value indicating whether the join message is hidden.
-        /// </summary>
+        public bool AgeRestricted { get; private set; } = true;
         public bool HideJoinMessage { get; private set; } = false;
-
-        /// <summary>
-        /// Gets the multiplier for rain spawn rate.
-        /// </summary>
         public float RainMultiplier { get; private set; } = 1f;
-
-        /// <summary>
-        /// Gets a value indicating whether meteors should spawn.
-        /// </summary>
         public bool ShouldSpawnMeteor { get; private set; } = true;
-
-        /// <summary>
-        /// Gets a value indicating whether metal should spawn.
-        /// </summary>
         public bool ShouldSpawnMetal { get; private set; } = true;
-
-        /// <summary>
-        /// Gets a value indicating whether portals should spawn.
-        /// </summary>
         public bool ShouldSpawnPortal { get; private set; } = true;
-
-        /// <summary>
-        /// Gets the list of admin Steam IDs.
-        /// </summary>
         public List<string> Admins { get; private set; } = [];
-
-        /// <summary>
-        /// Gets the game lobby.
-        /// </summary>
         public Lobby GameLobby { get; private set; }
-
-        /// <summary>
-        /// Gets the list of all players connected to the server.
-        /// </summary>
         public List<WFPlayer> AllPlayers { get; private set; } = [];
-
-        /// <summary>
-        /// Gets the list of server-owned actor instances.
-        /// </summary>
         public List<WFActor> ServerOwnedInstances { get; private set; } = [];
-
-        /// <summary>
-        /// Gets or sets the list of fish spawn points.
-        /// </summary>
         private List<Vector3>? FishPoints { get; set; }
-
-        /// <summary>
-        /// Gets or sets the list of trash spawn points.
-        /// </summary>
         private List<Vector3>? TrashPoints { get; set; }
-
-        /// <summary>
-        /// Gets or sets the list of shoreline points.
-        /// </summary>
         private List<Vector3>? ShorelinePoints { get; set; }
-
-        /// <summary>
-        /// Gets or sets the list of hidden spots.
-        /// </summary>
         private List<Vector3>? HiddenSpots { get; set; }
-
-        /// <summary>
-        /// Gets or sets the dictionary of hosted services.
-        /// </summary>
         private Dictionary<string, IHostedService> Services { get; set; } = [];
-
-        /// <summary>
-        /// Gets or sets the logger instance for the server.
-        /// </summary>
         private ILogger<CoveServer> Logger { get; set; } = logger;
-
-        /// <summary>
-        /// Gets or sets the logger factory instance.
-        /// </summary>
         private ILoggerFactory LoggerFactory { get; set; } = loggerFactory;
 
         /// <summary>
@@ -127,8 +39,6 @@
         /// <returns>A task representing the asynchronous operation.</returns>
         public async Task InitAsync()
         {
-            Logger.LogInformation("Initializing server...");
-
             if (!await LoadWorldAsync())
             {
                 Logger.LogError("World file missing or invalid. Shutting down.");
@@ -153,10 +63,12 @@
 
             await SetupConfigurationAsync();
 
-            Logger.LogInformation("Loading admins...");
-            LoadAdmins();
-
-            await SetupPluginsAsync();
+            Logger.LogInformation("Initializing server...");
+            SteamMatchmaking.OnLobbyMemberJoined += OnLobbyMemberJoined;
+            SteamMatchmaking.OnLobbyMemberLeave += OnLobbyMemberLeave;
+            SteamMatchmaking.OnChatMessage += OnChatMessage;
+            SteamNetworking.OnP2PSessionRequest += OnP2PSessionRequest;
+            SteamNetworking.OnP2PConnectionFailed += OnP2PConnectionFailed;
 
             if (!InitializeSteamClient())
             {
@@ -164,160 +76,45 @@
                 return;
             }
 
-            Logger.LogInformation("Starting background tasks...");
+            // Run Steamworks callbacks in a background task
             _ = Task.Run(() => RunSteamworksUpdateAsync());
+
+            SteamMatchmaking.OnLobbyCreated += OnLobbyCreated;
+
+            var lobbyResult = await SteamMatchmaking.CreateLobbyAsync(MaxPlayers);
+            if (lobbyResult.HasValue)
+            {
+                Logger.LogInformation("Lobby created successfully.");
+                GameLobby = lobbyResult.Value;
+
+                GameLobby.SetJoinable(true);
+                GameLobby.SetData("ref", "webfishing_gamelobby");
+                GameLobby.SetData("version", WebFishingGameVersion);
+                GameLobby.SetData("code", LobbyCode);
+                GameLobby.SetData("type", CodeOnly ? "code_only" : "public");
+                GameLobby.SetData("public", "true");
+                GameLobby.SetData("age_limit", AgeRestricted ? "true" : "false");
+                GameLobby.SetData("cap", MaxPlayers.ToString());
+                GameLobby.SetData("lobby_name", ServerName);
+                GameLobby.SetData("name", ServerName);
+
+                Logger.LogWarning("Lobby code: {LobbyCode}", LobbyCode);
+            }
+            else
+            {
+                Logger.LogError("Failed to create lobby.");
+                return;
+            }
+
+            Logger.LogInformation("Loading admins...");
+            LoadAdmins();
+
+            await SetupPluginsAsync();
+
+            Logger.LogInformation("Starting background tasks...");
             _ = Task.Run(() => ProcessNetworkPacketsAsync());
 
             await StartHostedServicesAsync();
-
-            Logger.LogInformation("Server initialization complete. Creating lobby...");
-            SteamMatchmaking.OnLobbyCreated += void (Result result, Lobby gameLobby) =>
-            {
-                gameLobby.SetJoinable(true);
-                gameLobby.SetData("ref", "webfishing_gamelobby");
-                gameLobby.SetData("version", WebFishingGameVersion);
-                gameLobby.SetData("code", LobbyCode);
-                gameLobby.SetData("type", CodeOnly ? "code_only" : "public");
-                gameLobby.SetData("public", "true");
-                gameLobby.SetData("age_restricted", AgeRestricted ? "true" : "false");
-                gameLobby.SetData("cap", MaxPlayers.ToString());
-
-                SteamNetworking.AllowP2PPacketRelay(true);
-
-                // This is WebFishing server-specific. Possibly benign value to determine if server appears on server list.
-                gameLobby.SetData("server_browser_value", "0");
-
-                Logger.LogInformation("Lobby created successfully.");
-                Logger.LogWarning("Lobby code: {LobbyCode}", LobbyCode);
-
-                GameLobby = gameLobby;
-                UpdatePlayerCount();
-            };
-
-            SteamMatchmaking.OnLobbyMemberJoined += void (Lobby gameLobby, Friend friend) =>
-            {
-                var permaBans = new HashSet<ulong>
-              {
-                  76561199220832861, // Add more SteamIDs as needed
-                  76561198000000000
-              };
-
-                if (permaBans.Contains(friend.Id.Value))
-                {
-                    Logger.LogWarning("Player {Name} ({SteamId}) is permanently banned.", friend.Name, friend.Id.Value);
-                    KickPlayer(friend.Id.Value);
-                    return;
-                }
-
-
-                WFPlayer player = new(friend.Id.Value, friend.Name);
-                AllPlayers.Add(player);
-
-                PlayerLogger.LogPlayerJoined(
-                  Logger,
-                  AllPlayers.Count,
-                  player,
-                  friend
-                );
-
-                UpdatePlayerCount();
-
-                foreach (PluginInstance plugin in LoadedPlugins)
-                {
-                    plugin.plugin.OnPlayerJoin(player);
-                }
-            };
-
-            SteamMatchmaking.OnLobbyMemberLeave += void (Lobby gameLobby, Friend friend) =>
-            {
-                var player = AllPlayers.Find(p => p.SteamId.Value == friend.Id.Value);
-
-                if (player == null)
-                {
-                    Logger.LogError("Player {Name} with SteamId: {SteamId} not found in AllPlayers list.", friend.Name, friend.Id.Value);
-                    return;
-                }
-
-                AllPlayers.Remove(player);
-                PlayerLogger.LogPlayerLeft(
-                  Logger,
-                  AllPlayers.Count,
-                  player,
-                  friend
-                );
-                UpdatePlayerCount();
-            };
-
-            SteamMatchmaking.OnChatMessage += void (Lobby gameLobby, Friend friend, string message) =>
-            {
-                var player = AllPlayers.Find(p => p.SteamId.Value == friend.Id.Value);
-                if (player == null)
-                {
-                    Logger.LogError("Player {Name} with SteamId: {SteamId} not found in AllPlayers list.", friend.Name, friend.Id.Value);
-                    return;
-                }
-
-                Logger.LogInformation("{FisherName} ({SteamId}): {Message}", player.FisherName, friend.Id.Value, message);
-
-                foreach (PluginInstance plugin in LoadedPlugins)
-                {
-                    plugin.plugin.OnChatMessage(player, message);
-                }
-            };
-
-            SteamNetworking.OnP2PSessionRequest += void (SteamId steamId) =>
-            {
-                if (GameLobby.Members.Any(f => f.Id == steamId.Value))
-                {
-                    Logger.LogInformation("Accepting P2P session request from {SteamId}.", steamId);
-                    SteamNetworking.AcceptP2PSessionWithUser(steamId);
-                }
-            };
-
-            SteamNetworking.OnP2PConnectionFailed += void (SteamId steamId, P2PSessionError error) =>
-            {
-                Logger.LogWarning("P2P connection failed with {SteamId}: {Error}", steamId, error);
-            };
-
-            try
-            {
-                var lobbyResult = await SteamMatchmaking.CreateLobbyAsync(MaxPlayers);
-                if (lobbyResult.HasValue)
-                {
-                    Logger.LogInformation("Lobby created successfully.");
-                    GameLobby = lobbyResult.Value;
-
-                    GameLobby.SetJoinable(true);
-                    GameLobby.SetData("ref", "webfishing_gamelobby");
-                    GameLobby.SetData("version", WebFishingGameVersion);
-                    GameLobby.SetData("code", LobbyCode);
-                    GameLobby.SetData("type", CodeOnly ? "code_only" : "public");
-                    GameLobby.SetData("public", "true");
-                    GameLobby.SetData("age_restricted", AgeRestricted ? "true" : "false");
-                    GameLobby.SetData("cap", MaxPlayers.ToString());
-
-                    Logger.LogWarning("Lobby code: {LobbyCode}", LobbyCode);
-                }
-                else
-                {
-                    Logger.LogError("Failed to create lobby.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError("Failed to create lobby: {ErrorMessage}", ex.Message);
-                return;
-            }
-            // var lobbyResult = await SteamMatchmaking.CreateLobbyAsync(MaxPlayers);
-            // if (lobbyResult.HasValue)
-            // {
-            //   Logger.LogInformation("Post lobby creation passed!");
-            // }
-            // else
-            // {
-            //     Logger.LogError("Failed to create lobby.");
-            //     return;
-            // }
 
             Logger.LogInformation("Server is now running.");
         }
@@ -436,7 +233,7 @@
             }
             else
             {
-                Logger.LogWarning("Admins file not found.");
+                Logger.LogWarning("Admins file not found. No admins loaded.");
             }
         }
 
@@ -455,8 +252,7 @@
 
             await Task.Run(() =>
             {
-                // Simulate loading plugins
-                Logger.LogInformation("Loading plugins...");
+                LoadAllPlugins();
             });
         }
 
@@ -562,6 +358,104 @@
         public IEnumerable<WFActor> GetServerOwnedInstances()
         {
             return ServerOwnedInstances;
+        }
+
+        private void OnLobbyCreated(Result result, Lobby gameLobby)
+        {
+            gameLobby.SetJoinable(true);
+            gameLobby.SetData("ref", "webfishing_gamelobby");
+            gameLobby.SetData("version", WebFishingGameVersion);
+            gameLobby.SetData("code", LobbyCode);
+            gameLobby.SetData("type", CodeOnly ? "code_only" : "public");
+            gameLobby.SetData("public", "true");
+            gameLobby.SetData("age_limit", AgeRestricted ? "true" : "false");
+            gameLobby.SetData("cap", MaxPlayers.ToString());
+            gameLobby.SetData("lobby_name", ServerName);
+            gameLobby.SetData("name", ServerName);
+
+            SteamNetworking.AllowP2PPacketRelay(true);
+
+            // This is WebFishing server-specific. Possibly benign value to determine if server appears on server list.
+            gameLobby.SetData("server_browser_value", "0");
+            GameLobby = gameLobby;
+            Logger.LogWarning("YOUR LOBBY CODE: {LobbyCode}", LobbyCode);
+            UpdatePlayerCount();
+        }
+
+        private void OnLobbyMemberJoined(Lobby gameLobby, Friend friend)
+        {
+            var player = AllPlayers.Find(p => p.SteamId.Value == friend.Id.Value);
+
+            if (player == null) {
+              player = new(friend.Id.Value, friend.Name);
+              AllPlayers.Add(player);
+            }
+
+            PlayerLogger.LogPlayerJoined(
+              Logger,
+              AllPlayers.Count,
+              player,
+              friend
+            );
+
+            UpdatePlayerCount();
+
+            foreach (PluginInstance plugin in LoadedPlugins)
+            {
+                plugin.plugin.OnPlayerJoin(player);
+            }
+        }
+
+        private void OnLobbyMemberLeave (Lobby gameLobby, Friend friend)
+        {
+            var player = AllPlayers.Find(p => p.SteamId.Value == friend.Id.Value);
+
+            if (player == null)
+            {
+                Logger.LogError("Player {Name} with SteamId: {SteamId} not found in AllPlayers list.", friend.Name, friend.Id.Value);
+                return;
+            }
+
+            AllPlayers.Remove(player);
+            PlayerLogger.LogPlayerLeft(
+              Logger,
+              AllPlayers.Count,
+              player,
+              friend
+            );
+            UpdatePlayerCount();
+        }
+
+        private void OnChatMessage(Lobby gameLobby, Friend friend, string message)
+        {
+          Logger.LogWarning("USER: {Message}", message);
+          var player = AllPlayers.Find(p => p.SteamId.Value == friend.Id.Value);
+          if (player == null)
+          {
+              Logger.LogError("Player {Name} with SteamId: {SteamId} not found in AllPlayers list.", friend.Name, friend.Id.Value);
+              return;
+          }
+
+          Logger.LogInformation("{FisherName} ({SteamId}): {Message}", player.FisherName, friend.Id.Value, message);
+
+          foreach (PluginInstance plugin in LoadedPlugins)
+          {
+              plugin.plugin.OnChatMessage(player, message);
+          }
+        }
+
+        private void OnP2PSessionRequest(SteamId steamId)
+        {
+            if (GameLobby.Members.Any(f => f.Id.Value == steamId.Value))
+            {
+                Logger.LogInformation("Accepting P2P session request from {SteamId}.", steamId);
+                SteamNetworking.AcceptP2PSessionWithUser(steamId);
+            }
+        }
+
+        private void OnP2PConnectionFailed(SteamId steamId, P2PSessionError error)
+        {
+            Logger.LogWarning("P2P connection failed with {SteamId}: {Error}", steamId, error);
         }
     }
 }

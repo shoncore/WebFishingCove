@@ -122,11 +122,13 @@
                     var player = AllPlayers.Find(p => p.SteamId.Value == steamId.Value);
                     if (player == null)
                     {
-                        Logger.LogInformation("No fisher found for player instance!");
+                        player = new WFPlayer(steamId, "Unknown");
+                        AllPlayers.Add(player);
+                        // Logger.LogInformation("No fisher found for player instance!");
                     }
                     else
                     {
-                        player.InstanceID = actorId;
+                        player.InstanceId = actorId;
                     }
                 }
 
@@ -145,7 +147,7 @@
             )
                 return;
 
-            var player = AllPlayers.Find(p => p.InstanceID == actorId);
+            var player = AllPlayers.Find(p => p.InstanceId == actorId);
             if (
                 player != null
                 && packetInfo.TryGetValue("pos", out var posObj)
@@ -184,7 +186,7 @@
 
             // Attempt to find the sender
             Logger.LogWarning("Chat message from {SteamId}", steamId.Value);
-            Logger.LogWarning("AllPlayers: {AllPlayers}", AllPlayers);
+            AllPlayers.ForEach(p => Logger.LogWarning("Player: {Player}", p.SteamId.Value));
 
             WFPlayer? player = AllPlayers.Find(p => p.SteamId.Value == steamId.Value);
             if (player == null)
@@ -241,7 +243,7 @@
                     && actorToWipeObj is long actorToWipe
                 )
                 {
-                    var serverInst = ServerOwnedInstances.Find(i => i.InstanceID == actorToWipe);
+                    var serverInst = ServerOwnedInstances.Find(i => i.InstanceId == actorToWipe);
                     if (serverInst != null)
                     {
                         Logger.LogInformation(

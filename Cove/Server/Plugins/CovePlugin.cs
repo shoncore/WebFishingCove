@@ -38,7 +38,7 @@
 
         public WFActor? GetActorFromID(int id)
         {
-            return parentServer.ServerOwnedInstances.Find(a => a.InstanceID == id);
+            return parentServer.ServerOwnedInstances.Find(a => a.InstanceId == id);
         }
 
         // please make sure you use the correct actorname or the game freaks out!

@@ -81,12 +81,15 @@ IF YOU ARE RUNNING UNTRUSTED PLUGINS, EXIT COVE NOW.
                         {
                             if (Activator.CreateInstance(type, this) is CovePlugin instance)
                             {
-                                string pluginConfig = ReadConfigFromPlugin(
+                                string pluginConfigContent = ReadConfigFromPlugin(
                                     $"{assembly.GetName().Name}.plugin.cfg",
                                     assembly
                                 );
-                                var configReader = new ConfigReader(LoggerFactory.CreateLogger<ConfigReader>());
-                                var config = configReader.ReadConfig(pluginConfig);
+
+                                var configReader = new ConfigReader(
+                                    LoggerFactory.CreateLogger<ConfigReader>()
+                                );
+                                var config = configReader.ReadConfigFromString(pluginConfigContent);
 
                                 if (
                                     config.TryGetValue("name", out var name)
@@ -108,12 +111,18 @@ IF YOU ARE RUNNING UNTRUSTED PLUGINS, EXIT COVE NOW.
                                 }
                                 else
                                 {
-                                    Logger.LogWarning("Plugin '{Plugin}' missing required config entries.", assembly.GetName().Name);
+                                    Logger.LogWarning(
+                                        "Plugin '{Plugin}' missing required config entries.",
+                                        assembly.GetName().Name
+                                    );
                                 }
                             }
                             else
                             {
-                                Logger.LogWarning("Unable to create instance of plugin {Type}", type.FullName);
+                                Logger.LogWarning(
+                                    "Unable to create instance of plugin {Type}",
+                                    type.FullName
+                                );
                             }
                         }
                         catch (Exception ex)
@@ -132,20 +141,25 @@ IF YOU ARE RUNNING UNTRUSTED PLUGINS, EXIT COVE NOW.
         /// <param name="assembly">The plugin assembly.</param>
         /// <returns>The contents of the configuration file as a string.</returns>
         /// <exception cref="FileNotFoundException">Thrown if the config file is not found in the assembly.</exception>
-        private static string ReadConfigFromPlugin(string fileIdentifier, Assembly assembly)
+        private string ReadConfigFromPlugin(string fileIdentifier, Assembly assembly)
         {
+            var resourceNames = assembly.GetManifestResourceNames();
+            Logger.LogInformation(
+                "Resources found in {Assembly}: {Resources}",
+                assembly.FullName,
+                string.Join(", ", resourceNames)
+            );
+
             using Stream? fileStream = assembly.GetManifestResourceStream(fileIdentifier);
             if (fileStream != null)
             {
                 using var reader = new StreamReader(fileStream);
                 return reader.ReadToEnd();
             }
-            else
-            {
-                throw new FileNotFoundException(
-                    $"Plugin '{assembly.GetName().Name}' doesn't have a '{fileIdentifier}' file!"
-                );
-            }
+
+            throw new FileNotFoundException(
+                $"Plugin '{assembly.GetName().Name}' doesn't have a '{fileIdentifier}' file!"
+            );
         }
     }
 }

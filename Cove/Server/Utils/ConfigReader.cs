@@ -58,6 +58,17 @@ namespace Cove.Server.Utils
         }
 
         /// <summary>
+        /// Reads configuration from a raw string.
+        /// </summary>
+        /// <param name="configContent">The raw configuration content as a string.</param>
+        /// <returns>A dictionary containing configuration key-value pairs.</returns>
+        public Dictionary<string, string> ReadConfigFromString(string configContent)
+        {
+            _logger.LogDebug("Reading configuration from raw content.");
+            return ParseConfig(configContent);
+        }
+
+        /// <summary>
         /// Reads an embedded resource from the assembly.
         /// </summary>
         /// <param name="resourceName">The name of the embedded resource.</param>

@@ -140,7 +140,7 @@
         /// Finds a server-owned actor by its ID.
         /// </summary>
         private WFActor FindActorByID(long instanceId) =>
-            ServerOwnedInstances.Find(a => a.InstanceID == instanceId)!;
+            ServerOwnedInstances.Find(a => a.InstanceId == instanceId)!;
 
         /// <summary>
         /// Spawns a generic actor at the specified position.
@@ -188,7 +188,7 @@
             var removePacket = new Dictionary<string, object>
             {
                 ["type"] = "actor_action",
-                ["actor_id"] = instance.InstanceID,
+                ["actor_id"] = instance.InstanceId,
                 ["action"] = "queue_free",
                 ["params"] = new Dictionary<int, object>()
             };
@@ -214,7 +214,7 @@
                         ["rot"] = new Vector3(0, 0, 0),
                         ["zone"] = "main_zone",
                         ["zone_owner"] = -1,
-                        ["actor_id"] = actor.InstanceID,
+                        ["actor_id"] = actor.InstanceId,
                         ["creator_id"] = SteamClient.SteamId.Value
                     }
                 };
@@ -340,7 +340,7 @@
             var actionPacket = new Dictionary<string, object>
             {
                 ["type"] = "actor_action",
-                ["actor_id"] = instance.InstanceID,
+                ["actor_id"] = instance.InstanceId,
                 ["action"] = "_set_zone",
                 ["params"] = new Dictionary<int, object> { [0] = zoneName, [1] = zoneOwner }
             };
@@ -356,7 +356,7 @@
             var actionPacket = new Dictionary<string, object>
             {
                 ["type"] = "actor_action",
-                ["actor_id"] = instance.InstanceID,
+                ["actor_id"] = instance.InstanceId,
                 ["action"] = "_ready",
                 ["params"] = new Dictionary<int, object>()
             };
@@ -477,7 +477,7 @@
                 """,
                 playerCount,
                 player.FisherName,
-                player.FisherID,
+                player.FisherId,
                 player.SteamId.Value,
                 friend.Relationship,
                 aliases
@@ -511,7 +511,7 @@
                 """,
                 playerCount,
                 player.FisherName,
-                player.FisherID,
+                player.FisherId,
                 player.SteamId.Value,
                 friend.Relationship,
                 aliases

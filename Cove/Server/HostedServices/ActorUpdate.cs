@@ -51,31 +51,32 @@
                 {
                     actor.OnUpdate();
 
-                    if (!_pastTransforms.ContainsKey(actor.InstanceID))
+                    if (!_pastTransforms.ContainsKey(actor.InstanceId))
                     {
-                        _pastTransforms[actor.InstanceID] = Vector3.Zero;
+                        _pastTransforms[actor.InstanceId] = Vector3.Zero;
                     }
 
                     // Send updates to clients if the actor has moved or at the idle update threshold.
-                    if (actor.Position != _pastTransforms[actor.InstanceID] || _updateCounter == IdleUpdateThreshold)
+                    if (actor.Position != _pastTransforms[actor.InstanceId] || _updateCounter == IdleUpdateThreshold)
                     {
                         var packet = new Dictionary<string, object>
                         {
                             { "type", "actor_update" },
-                            { "actor_id", actor.InstanceID },
+                            { "actor_id", actor.InstanceId },
                             { "pos", actor.Position },
                             { "rot", actor.Rotation }
                         };
 
-                        _pastTransforms[actor.InstanceID] = actor.Position;
+                        _pastTransforms[actor.InstanceId] = actor.Position;
                         _server.SendPacketToPlayers(packet);
                     }
                 }
             }
-            catch (InvalidOperationException e)
+            catch (InvalidOperationException ex)
             {
-                // Log any iteration errors, usually caused by list modifications during iteration.
-                _logger.LogDebug("Actor list was modified during iteration: {Message}", e.Message);
+              // This benign exception is logged when a player spawn/despawn event occurs during list iteration.
+              // Ignore the error but log it during debugging.
+                _logger.LogDebug(ex, "Actor list was modified during iteration!");
             }
 
             if (_updateCounter >= IdleUpdateThreshold)

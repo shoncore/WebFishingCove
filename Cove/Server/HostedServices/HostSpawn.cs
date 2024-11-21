@@ -9,12 +9,17 @@
     /// <param name="logger">The logger used for logging service operations.</param>
     /// <param name="server">The server instance that owns this service.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="logger"/> or <paramref name="server"/> is null.</exception>
-    public class HostSpawnService(ILogger<HostSpawnService> logger, CoveServer server) : IHostedService, IDisposable
+    public class HostSpawnService(ILogger<HostSpawnService> logger, CoveServer server)
+        : IHostedService,
+            IDisposable
     {
-        private readonly ILogger<HostSpawnService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        private readonly CoveServer _server = server ?? throw new ArgumentNullException(nameof(server));
+        private readonly ILogger<HostSpawnService> _logger =
+            logger ?? throw new ArgumentNullException(nameof(logger));
+        private readonly CoveServer _server =
+            server ?? throw new ArgumentNullException(nameof(server));
         private Timer? _timer;
         private float _rainChance = 0f;
+        private static readonly Random _random = new();
 
         /// <summary>
         /// Starts the <see cref="HostSpawnService"/> and initializes the periodic timer for spawning instances.
@@ -53,8 +58,14 @@
         {
             try
             {
-                var expiredInstances = _server.ServerOwnedInstances
-                    .Where(inst => inst.ShouldDespawn && (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - inst.SpawnTime.ToUnixTimeSeconds()) > inst.DespawnTime)
+                var expiredInstances = _server
+                    .ServerOwnedInstances.Where(inst =>
+                        inst.ShouldDespawn
+                        && (
+                            DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                            - inst.SpawnTime.ToUnixTimeSeconds()
+                        ) > inst.DespawnTime
+                    )
                     .ToList();
 
                 foreach (var inst in expiredInstances)
@@ -65,47 +76,49 @@
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogDebug("Error during instance removal: {Message}", ex.Message);
+                _logger.LogError(ex, "Error during stale instance removal!");
             }
         }
 
         /// <summary>
         /// Determines the type of instance to spawn based on random factors and server settings.
+        /// Will increase the chance of rain over time and reset it when rain is spawned.
         /// </summary>
         /// <returns>The type of instance to spawn.</returns>
         private string DetermineSpawnType()
         {
-            var random = new Random();
-            var beginningTypes = new[] { "fish", "none" };
-            var type = beginningTypes[random.Next(beginningTypes.Length)];
+            var baseSpawnChance = _random.NextDouble();
 
-            // Meteor spawn logic
-            if (random.NextDouble() < 0.01 && random.NextDouble() < 0.4 && _server.ShouldSpawnMeteor)
+            var decideMeteor =
+                baseSpawnChance < 0.01 && _random.NextDouble() < 0.4 && _server.ShouldSpawnMeteor;
+            if (decideMeteor)
             {
-                type = "meteor";
+                return "meteor";
             }
 
-            // Rain spawn logic
-            if (random.NextDouble() < _rainChance && random.NextDouble() < 0.12)
+            var decideRain = baseSpawnChance < _rainChance && _random.NextDouble() < 0.12;
+            if (decideRain)
             {
-                type = "rain";
-                _rainChance = 0; // Reset rain chance after spawn
+                _rainChance = 0;
+                return "rain";
             }
             else
             {
-                if (random.NextDouble() < 0.75)
+                if (baseSpawnChance < 0.75)
                 {
                     _rainChance += 0.001f * _server.RainMultiplier;
                 }
             }
 
-            // Void portal spawn logic
-            if (random.NextDouble() < 0.01 && random.NextDouble() < 0.25 && _server.ShouldSpawnPortal)
+            var decideVoidPortal =
+                baseSpawnChance < 0.01 && _random.NextDouble() < 0.25 && _server.ShouldSpawnPortal;
+            if (decideVoidPortal)
             {
-                type = "void_portal";
+                return "void_portal";
             }
 
-            return type;
+            var defaultTypes = new[] { "fish", "none" };
+            return defaultTypes[_random.Next(defaultTypes.Length)];
         }
 
         /// <summary>
@@ -114,14 +127,27 @@
         /// <param name="type">The type of instance to spawn.</param>
         private void SpawnType(string type)
         {
+            if (string.IsNullOrWhiteSpace(type))
+            {
+                _logger.LogWarning("SpawnType called with an empty or null type.");
+                return;
+            }
+
             switch (type)
             {
                 case "none":
+                    _logger.LogInformation("No spawn action taken (type: none).");
                     break;
 
                 case "fish":
                     // Prevent excessive fish spawning to avoid lag
-                    if (_server.ServerOwnedInstances.Count > 15) return;
+                    if (_server.ServerOwnedInstances.Count > 15)
+                    {
+                        _logger.LogInformation(
+                            "Fish spawn skipped: too many server-owned instances."
+                        );
+                        return;
+                    }
                     _server.SpawnFish();
                     _logger.LogInformation("Spawned a fish.");
                     break;
@@ -165,6 +191,7 @@
         public void Dispose()
         {
             _timer?.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }
