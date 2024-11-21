@@ -2,6 +2,8 @@
 {
     public partial class CoveServer
     {
+      private readonly HashSet<string> _loggedUnknownPacketTypes = [];
+
         /// <summary>
         /// Handles incoming network packets and performs actions based on the packet type.
         /// </summary>
@@ -47,9 +49,21 @@
                     break;
 
                 default:
-                    //TODO: Log and cache the packet type so we do not spam the console, but still have a record of the failed packet types.
-                    // Logger.LogWarning("Unhandled packet type: {Type}", type);
+                    LogUnknownPacketType(type);
                     break;
+            }
+        }
+
+        /// <summary>
+        /// This method logs a warning for an unhandled packet type only once.
+        /// Subsequent packets of the same type will not be logged, preventing log spam.
+        /// </summary>
+        /// <param name="type"></param>
+        private void LogUnknownPacketType(string type)
+        {
+            if (_loggedUnknownPacketTypes.Add(type))
+            {
+                Logger.LogWarning("Unhandled packet type: {Type}", type);
             }
         }
 
@@ -79,8 +93,8 @@
         {
             if (!HideJoinMessage)
             {
-                MessagePlayer($"Welcome to {ServerName}! ", steamId);
-                MessagePlayer("For help contact @lo_sh on discord.", steamId);
+                MessagePlayer($"{ServerName}", steamId);
+                MessagePlayer($"Join the discord at {DiscordLink}", steamId);
             }
 
             var hostPacket = new Dictionary<string, object>
@@ -94,7 +108,7 @@
             if (IsPlayerAdmin(steamId))
             {
                 MessagePlayer(
-                    "You're an admin on this server! Type !help to see commands.",
+                    "You're an admin on this server.",
                     steamId
                 );
             }

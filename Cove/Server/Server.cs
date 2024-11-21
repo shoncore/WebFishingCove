@@ -21,6 +21,7 @@
         public bool ShouldSpawnMeteor { get; private set; } = true;
         public bool ShouldSpawnMetal { get; private set; } = true;
         public bool ShouldSpawnPortal { get; private set; } = true;
+        public string DiscordLink { get; private set; } = "https://discord.gg/f5nr6jYPmH";
         public List<string> Admins { get; private set; } = [];
         public Lobby GameLobby { get; private set; }
         public List<WFPlayer> AllPlayers { get; private set; } = [];
@@ -201,6 +202,9 @@
                             break;
                         case "spawnPortal":
                             ShouldSpawnPortal = GetBoolFromString(value);
+                            break;
+                        case "discordLink":
+                            DiscordLink = value;
                             break;
                         default:
                             if (!UnhandledKeyLogger.KeyExists(value))
