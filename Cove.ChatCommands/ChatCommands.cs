@@ -111,7 +111,7 @@ namespace Cove.ChatCommands
         /// <param name="sender">The player who issued the command.</param>
         private void HandleHelpCommand(WFPlayer sender)
         {
-          if (!IsPlayerAdmin(sender))
+          if (IsPlayerAdmin(sender))
           {
             SendPlayerChatMessage(sender, "--- HELP ---");
             SendPlayerChatMessage(sender, "!help - Shows this message");
