@@ -22,6 +22,7 @@
         public bool ShouldSpawnMetal { get; private set; } = true;
         public bool ShouldSpawnPortal { get; private set; } = true;
         public string DiscordLink { get; private set; } = "https://discord.gg/f5nr6jYPmH";
+        public string MessageOfTheDay { get; set; } = "Join our Discord server: https://discord.gg/f5nr6jYPmH";
         public List<string> Admins { get; private set; } = [];
         public Lobby GameLobby { get; private set; }
         public List<WFPlayer> AllPlayers { get; private set; } = [];

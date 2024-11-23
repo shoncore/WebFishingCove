@@ -1,4 +1,5 @@
-﻿using Cove.Server;
+﻿using System.Linq;
+using Cove.Server;
 using Cove.Server.Actor;
 using Cove.Server.Plugins;
 
@@ -89,6 +90,14 @@ namespace Cove.ChatCommands
                     case "!code":
                         HandleCodeCommand(player);
                         break;
+
+                    case "!discord":
+                        HandleDiscordCommand(player);
+                        break;
+
+                    case "!motd":
+                        Server.MessageOfTheDay = string.Join(" ", commandParts.Skip(1));
+                        break;
                     default:
                         SendPlayerChatMessage(player, $"Unknown command: {command}");
                         break;
@@ -102,17 +111,24 @@ namespace Cove.ChatCommands
         /// <param name="sender">The player who issued the command.</param>
         private void HandleHelpCommand(WFPlayer sender)
         {
+          if (!IsPlayerAdmin(sender))
+          {
             SendPlayerChatMessage(sender, "--- HELP ---");
             SendPlayerChatMessage(sender, "!help - Shows this message");
             SendPlayerChatMessage(sender, "!users [page] - Shows all players in the server");
             SendPlayerChatMessage(sender, "!spawn <actor> - Spawns an actor");
             SendPlayerChatMessage(sender, "!kick <player> - Kicks a player");
             SendPlayerChatMessage(sender, "!ban <player> - Bans a player");
-            SendPlayerChatMessage(sender, "!unban <player> - Unbans a player");
             SendPlayerChatMessage(sender, "!setjoinable <true/false> - Opens or closes the lobby");
-            SendPlayerChatMessage(sender, "!say <player> <message> - Sends an admin message to a player");
             SendPlayerChatMessage(sender, "!discord - Shows the Discord invite link");
             SendPlayerChatMessage(sender, "!refreshadmins - Refreshes the admins list");
+          }
+          else
+          {
+            SendPlayerChatMessage(sender, "--- HELP ---");
+            SendPlayerChatMessage(sender, "!help - Shows this message");
+            SendPlayerChatMessage(sender, "!discord - Shows the Discord invite link");
+          }
         }
 
         /// <summary>
@@ -137,6 +153,12 @@ namespace Cove.ChatCommands
             }
 
             var allPlayers = GetAllPlayers();
+            if (allPlayers.Length <= 1)
+            {
+                SendPlayerChatMessage(sender, "It's only you here.");
+                return;
+            }
+
             int totalPlayers = allPlayers.Length;
             int totalPages = (int)Math.Ceiling((double)totalPlayers / pageSize);
 
@@ -175,8 +197,8 @@ namespace Cove.ChatCommands
             }
 
             string actorType = commandParts[1].ToLower();
-            bool spawned = false;
-            switch (actorType)
+      bool spawned;
+      switch (actorType)
             {
                 case "rain":
                     Server.SpawnRainCloud();
@@ -341,6 +363,12 @@ namespace Cove.ChatCommands
         private void HandleCodeCommand(WFPlayer sender)
         {
             SendPlayerChatMessage(sender, "The code is: Press ESC and click on the show code button. Idiot.");
+            return;
+        }
+
+        private void HandleDiscordCommand(WFPlayer sender)
+        {
+            SendPlayerChatMessage(sender, $"Join the Cove Discord server: {Server.DiscordLink}");
             return;
         }
     }

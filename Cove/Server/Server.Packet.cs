@@ -94,7 +94,7 @@
             if (!HideJoinMessage)
             {
                 MessagePlayer($"{ServerName}", steamId);
-                MessagePlayer($"Join the discord at {DiscordLink}", steamId);
+                MessagePlayer($"{MessageOfTheDay}", steamId);
             }
 
             var hostPacket = new Dictionary<string, object>
