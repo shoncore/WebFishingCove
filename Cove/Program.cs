@@ -41,7 +41,7 @@ while (true)
             break;
 
         case "say":
-            if (args.Length > 1)
+            if (inputArgs.Length >= 1)
             {
                 string message = args[1];
                 webfishingServer.MessageGlobal("Server: {Message}", message);
@@ -54,7 +54,7 @@ while (true)
             break;
 
         case "ban":
-            if (args.Length > 1)
+            if (inputArgs.Length >= 1)
             {
                 string identifier = args[1];
                 WFPlayer? player = null;
@@ -93,7 +93,7 @@ while (true)
             break;
 
         case "kick":
-            if (args.Length > 1)
+            if (inputArgs.Length > 1)
             {
                 string identifier = args[1];
                 WFPlayer? player = null;
