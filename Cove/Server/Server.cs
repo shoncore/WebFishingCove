@@ -391,9 +391,10 @@
         {
             var player = AllPlayers.Find(p => p.SteamId.Value == friend.Id.Value);
 
-            if (player == null) {
-              player = new(friend.Id.Value, friend.Name);
-              AllPlayers.Add(player);
+            if (player == null)
+            {
+                player = new(friend.Id.Value, friend.Name);
+                AllPlayers.Add(player);
             }
 
             PlayerLogger.LogPlayerJoined(
@@ -411,7 +412,7 @@
             }
         }
 
-        private void OnLobbyMemberLeave (Lobby gameLobby, Friend friend)
+        private void OnLobbyMemberLeave(Lobby gameLobby, Friend friend)
         {
             var player = AllPlayers.Find(p => p.SteamId.Value == friend.Id.Value);
 
@@ -433,34 +434,34 @@
 
         private void OnChatMessage(Lobby gameLobby, Friend friend, string message)
         {
-          Logger.LogWarning("USER: {Message}", message);
-          var player = AllPlayers.Find(p => p.SteamId.Value == friend.Id.Value);
-          if (player == null)
-          {
-              Logger.LogError("Player {Name} with SteamId: {SteamId} not found in AllPlayers list.", friend.Name, friend.Id.Value);
-              return;
-          }
+            Logger.LogWarning("USER: {Message}", message);
+            var player = AllPlayers.Find(p => p.SteamId.Value == friend.Id.Value);
+            if (player == null)
+            {
+                Logger.LogError("Player {Name} with SteamId: {SteamId} not found in AllPlayers list.", friend.Name, friend.Id.Value);
+                return;
+            }
 
-          Logger.LogInformation("{FisherName} ({SteamId}): {Message}", player.FisherName, friend.Id.Value, message);
+            Logger.LogInformation("{FisherName} ({SteamId}): {Message}", player.FisherName, friend.Id.Value, message);
 
-          foreach (PluginInstance plugin in LoadedPlugins)
-          {
-              plugin.plugin.OnChatMessage(player, message);
-          }
+            foreach (PluginInstance plugin in LoadedPlugins)
+            {
+                plugin.plugin.OnChatMessage(player, message);
+            }
         }
 
         private void OnP2PSessionRequest(SteamId steamId)
         {
             if (GameLobby.Members.Any(f => f.Id.Value == steamId.Value))
             {
-                Logger.LogInformation("Accepting P2P session request from {SteamId}.", steamId);
+                Logger.LogInformation("Accepting P2P session request from {SteamId}.", steamId.Value);
                 SteamNetworking.AcceptP2PSessionWithUser(steamId);
             }
         }
 
         private void OnP2PConnectionFailed(SteamId steamId, P2PSessionError error)
         {
-            Logger.LogWarning("P2P connection failed with {SteamId}: {Error}", steamId, error);
+            Logger.LogWarning("P2P connection failed with {SteamId}: {Error}", steamId.Value, error);
         }
     }
 }

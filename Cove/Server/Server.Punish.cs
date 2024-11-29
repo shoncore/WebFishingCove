@@ -11,6 +11,8 @@
         /// <param name="saveToFile">Whether to save the ban to the bans file.</param>
         public void BanPlayer(SteamId steamId, bool saveToFile = false)
         {
+            Logger.LogInformation("Banning player {SteamId}", steamId.Value);
+
             var banPacket = new Dictionary<string, object>
             {
                 { "type", "ban" }
@@ -40,9 +42,11 @@
                 return false;
             }
 
-            var fileContent = File.ReadLines(filePath);
-            return fileContent.Any(line => line.Contains(steamId.Value.ToString()));
+            return File.ReadLines(filePath)
+                .Select(line => line.Split('#').FirstOrDefault()?.Trim())
+                .Any(bannedSteamId => ulong.TryParse(bannedSteamId, out var parsedId) && parsedId == steamId.Value);
         }
+
 
         /// <summary>
         /// Writes a player's SteamId and name to the bans file.
@@ -62,7 +66,7 @@
             try
             {
                 File.AppendAllText(filePath, $"\n{steamId.Value} #{player.FisherName}");
-                Logger.LogInformation("Added {FisherName} [{SteamId}] to bans file.", player.FisherName, player.SteamId);
+                Logger.LogInformation("Added {FisherName} [{SteamId}] to bans file.", player.FisherName, player.SteamId.Value);
             }
             catch (IOException ex)
             {

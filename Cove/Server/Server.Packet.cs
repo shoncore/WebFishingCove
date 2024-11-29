@@ -2,7 +2,7 @@
 {
     public partial class CoveServer
     {
-      private readonly HashSet<string> _loggedUnknownPacketTypes = [];
+        private readonly HashSet<string> _loggedUnknownPacketTypes = [];
 
         /// <summary>
         /// Handles incoming network packets and performs actions based on the packet type.
@@ -10,6 +10,13 @@
         /// <param name="packet">The incoming P2P network packet.</param>
         private void OnNetworkPacket(P2Packet packet)
         {
+            var steamId = packet.SteamId;
+            if (IsPlayerBanned(steamId))
+            {
+                Logger.LogInformation("Player {SteamId} is banned. Kicking...", steamId.Value);
+                KickPlayer(steamId);
+            }
+
             var packetInfo = ParsePacket(packet);
 
             if (!packetInfo.TryGetValue("type", out var typeObj) || typeObj is not string type)
@@ -82,10 +89,10 @@
             var handshakePacket = new Dictionary<string, object>
             {
                 { "type", "handshake" },
-                { "user_id", steamId }
+                { "user_id", steamId.Value.ToString() },
             };
 
-            Logger.LogInformation("Sending handshake packet to {SteamId}", steamId);
+            Logger.LogInformation("Sending handshake packet to {SteamId}", steamId.Value);
             SteamNetworking.SendP2PPacket(steamId, WritePacket(handshakePacket), nChannel: 2);
         }
 
@@ -107,10 +114,7 @@
 
             if (IsPlayerAdmin(steamId))
             {
-                MessagePlayer(
-                    "You're an admin on this server.",
-                    steamId
-                );
+                MessagePlayer("You're an admin on this server.", steamId);
             }
         }
 
@@ -136,9 +140,8 @@
                     var player = AllPlayers.Find(p => p.SteamId.Value == steamId.Value);
                     if (player == null)
                     {
-                        player = new WFPlayer(steamId, "Unknown");
+                        player = new WFPlayer(steamId, "???");
                         AllPlayers.Add(player);
-                        // Logger.LogInformation("No fisher found for player instance!");
                     }
                     else
                     {
@@ -169,11 +172,6 @@
             )
             {
                 player.Position = position;
-            }
-
-            if (IsPlayerBanned(steamId))
-            {
-                BanPlayer(steamId);
             }
         }
 

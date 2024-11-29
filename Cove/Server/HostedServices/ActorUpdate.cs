@@ -74,8 +74,8 @@
             }
             catch (InvalidOperationException ex)
             {
-              // This benign exception is logged when a player spawn/despawn event occurs during list iteration.
-              // Ignore the error but log it during debugging.
+                // This benign exception is logged when a player spawn/despawn event occurs during list iteration.
+                // Ignore the error but log it during debugging.
                 _logger.LogDebug(ex, "Actor list was modified during iteration!");
             }
 

@@ -263,7 +263,7 @@
             string user
         )
         {
-            // Note: This currently crashes the game.
+
             var rand = new Random();
             var letterId = rand.Next();
 
@@ -284,6 +284,12 @@
                 }
             };
 
+            var json = JsonSerializer.Serialize(letterPacket, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            Logger.LogInformation("Sending letter to {To}: {Json}", to, json);
             SteamNetworking.SendP2PPacket(to, WritePacket(letterPacket), nChannel: 2);
 
             return letterId;
@@ -372,29 +378,27 @@
             var adminEntries = Admins;
 
             return adminEntries.Any(
-                (Func<string, bool>)(
-                    entry =>
+                entry =>
+                {
+                    try
                     {
-                        try
-                        {
-                            // admins.cfg format: "steamid=admin"
-                            var parts = entry.Split('=').Select(p => p.Trim()).ToArray();
+                        // admins.cfg format: "steamid=admin"
+                        var parts = entry.Split('=').Select(p => p.Trim()).ToArray();
 
-                            if (parts.Length != 2)
-                                throw new FormatException($"Invalid entry format: {entry}");
+                        if (parts.Length != 2)
+                            throw new FormatException($"Invalid entry format: {entry}");
 
-                            var parsedSteamId = ulong.Parse(parts[0]);
-                            var isAdmin = bool.Parse(parts[1]);
+                        var parsedSteamId = ulong.Parse(parts[0]);
+                        var isAdmin = bool.Parse(parts[1]);
 
-                            return parsedSteamId == steamId.Value && isAdmin;
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogError(ex, "Failed to parse admin entry {Entry}", entry);
-                            return false;
-                        }
+                        return parsedSteamId == steamId.Value && isAdmin;
                     }
-                )
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Failed to parse admin entry {Entry}", entry);
+                        return false;
+                    }
+                }
             );
         }
 
